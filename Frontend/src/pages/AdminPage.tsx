@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authedFetch, fetchMe, login, logout, type AuthUser } from '../auth';
-import { fetchSiteSettings, updateSiteSettings, uploadLogo, deleteLogo, logoUrl, normalizeTheme, normalizeShell, normalizePalette, defaultColorFor, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
+import { fetchSiteSettings, updateSiteSettings, uploadLogo, deleteLogo, logoUrl, normalizeTheme, normalizeShell, normalizePalette, DEFAULT_ACCENT, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
 import type { Category, Link } from '../types';
 import EmojiPicker from '../components/EmojiPicker';
 import ColorPicker from '../components/ColorPicker';
@@ -112,7 +112,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const [siteTitle, setSiteTitle] = useState('');
   const [siteSubtitle, setSiteSubtitle] = useState('');
   const [siteLayout, setSiteLayout] = useState<LayoutTheme>('cards');
-  const [siteColor, setSiteColor] = useState(defaultColorFor('cards'));
+  const [siteColor, setSiteColor] = useState(DEFAULT_ACCENT);
   const [siteShell, setSiteShell] = useState<ShellLayout>('classic');
   const [sitePalette, setSitePalette] = useState<ThemePalette>('warm');
   const [hasLogo, setHasLogo] = useState(false);
@@ -164,7 +164,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       setSiteTitle(s.site_title);
       setSiteSubtitle(s.site_subtitle);
       setSiteLayout(layout);
-      setSiteColor(s.theme_color || defaultColorFor(layout));
+      setSiteColor(s.theme_color || DEFAULT_ACCENT);
       setSiteShell(normalizeShell(s.shell_layout));
       setSitePalette(normalizePalette(s.theme_palette));
       setHasLogo(!!s.has_logo);
@@ -188,12 +188,6 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     await loadSettings();
     onSettingsSaved();
   });
-
-  // Switching layout prefills that layout's default accent (admin can still override).
-  const onLayoutChange = (layout: LayoutTheme) => {
-    setSiteLayout(layout);
-    setSiteColor(defaultColorFor(layout));
-  };
 
   useEffect(() => {
     void guard('global', loadAll);
@@ -375,9 +369,9 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         </div>
         <p className="dld-hint">{SHELL_LAYOUTS.find((s) => s.value === siteShell)?.hint}</p>
         <div className="field"><span>Directory layout</span>
-          <LayoutPicker value={siteLayout} onChange={onLayoutChange} />
+          <LayoutPicker value={siteLayout} onChange={setSiteLayout} />
         </div>
-        <p className="dld-hint">{LAYOUT_THEMES.find((t) => t.value === siteLayout)?.hint} Changing layout resets the color to its default; you can then adjust it.</p>
+        <p className="dld-hint">{LAYOUT_THEMES.find((t) => t.value === siteLayout)?.hint}</p>
         <div className="field"><span>Theme color (accent)</span>
           <ColorPicker value={siteColor} onChange={(v) => setSiteColor(v)} />
         </div>

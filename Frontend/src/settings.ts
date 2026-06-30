@@ -106,16 +106,18 @@ export function normalizeShell(value: unknown): ShellLayout {
   return VALID_SHELLS.includes(value as ShellLayout) ? (value as ShellLayout) : 'classic';
 }
 
-// Selectable (preset, not customizable) directory layouts. Each carries a muted
-// default accent color. Add new presets here and handle them in DirectoryPage;
-// the admin dropdown is generated from this list.
-export const LAYOUT_THEMES: { value: LayoutTheme; label: string; hint: string; defaultColor: string }[] = [
-  { value: 'cards', label: 'Cards', hint: 'Roomy panels in columns with link cards (default).', defaultColor: '#a8623f' },
-  { value: 'compact', label: 'Compact list', hint: 'Dense rows, more links per screen.', defaultColor: '#4c6b8a' },
-  { value: 'tiles', label: 'Tiles', hint: 'Grid of icon + title tiles, like an app launcher.', defaultColor: '#4f7a64' },
-  { value: 'single', label: 'Single column', hint: 'One full-width column of categories.', defaultColor: '#5d6470' },
-  { value: 'sidebar', label: 'Sidebar (dashboard)', hint: 'Simple header with a left category menu and a content pane.', defaultColor: '#3c4a63' },
+// Selectable (preset, not customizable) directory layouts. Add new presets here
+// and handle them in DirectoryPage; the admin dropdown is generated from this list.
+export const LAYOUT_THEMES: { value: LayoutTheme; label: string; hint: string }[] = [
+  { value: 'cards', label: 'Cards', hint: 'Roomy panels in columns with link cards (default).' },
+  { value: 'compact', label: 'Compact list', hint: 'Dense rows, more links per screen.' },
+  { value: 'tiles', label: 'Tiles', hint: 'Grid of icon + title tiles, like an app launcher.' },
+  { value: 'single', label: 'Single column', hint: 'One full-width column of categories.' },
+  { value: 'sidebar', label: 'Sidebar (dashboard)', hint: 'Simple header with a left category menu and a content pane.' },
 ];
+
+// Single fallback accent, used only when no theme_color has been set.
+export const DEFAULT_ACCENT = '#a8623f';
 
 const VALID_THEMES = LAYOUT_THEMES.map((t) => t.value);
 
@@ -123,19 +125,14 @@ export function normalizeTheme(value: unknown): LayoutTheme {
   return VALID_THEMES.includes(value as LayoutTheme) ? (value as LayoutTheme) : 'cards';
 }
 
-export function defaultColorFor(theme: LayoutTheme): string {
-  return LAYOUT_THEMES.find((t) => t.value === theme)?.defaultColor || '#a8623f';
-}
-
 export function isHexColor(value: string): boolean {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
 }
 
-// Effective accent = explicit theme_color if valid, else the layout's default.
+// Effective accent = explicit theme_color if valid, else the single fallback.
 export function resolveAccent(settings: Partial<SiteSettings> | null | undefined): string {
-  const theme = normalizeTheme(settings?.layout_theme);
   const c = settings?.theme_color || '';
-  return isHexColor(c) ? c : defaultColorFor(theme);
+  return isHexColor(c) ? c : DEFAULT_ACCENT;
 }
 
 // Derive accent / accent-deep / accent-soft CSS variables from a single hex color.

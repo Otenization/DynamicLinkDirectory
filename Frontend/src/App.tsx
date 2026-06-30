@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { getAppConfig } from './config';
-import { fetchSiteSettings, resolveAccent, accentVars, paletteVars, defaultColorFor, normalizeShell, normalizePalette, logoUrl, type ShellLayout, type ThemePalette } from './settings';
+import { fetchSiteSettings, resolveAccent, accentVars, paletteVars, DEFAULT_ACCENT, normalizeShell, normalizePalette, logoUrl, type ShellLayout, type ThemePalette } from './settings';
 import DirectoryPage from './pages/DirectoryPage';
 import AdminPage from './pages/AdminPage';
 import './index.css';
@@ -14,7 +14,7 @@ export default function App() {
   // Hero text, accent, palette, and the whole-site shell all come from DB-backed settings.
   const [title, setTitle] = useState(config.app.name);
   const [subtitle, setSubtitle] = useState(config.app.subtitle);
-  const [accent, setAccent] = useState(defaultColorFor('cards'));
+  const [accent, setAccent] = useState(DEFAULT_ACCENT);
   const [shell, setShell] = useState<ShellLayout>('classic');
   const [palette, setPalette] = useState<ThemePalette>('warm');
   const [hasLogo, setHasLogo] = useState(false);
