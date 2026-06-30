@@ -27,9 +27,14 @@ v1 + first refinement pass (auth, DnD, search, click tracking) are built and ver
 - **Admin API** (auth required): `/api/categories` + `/api/links` — GET list, POST, PATCH /:uuid,
   DELETE /:uuid, POST /reorder ({ order: [uuid,...] } → assigns sort_order 1..n).
 - **Site settings** (`Settings` key/value table in `dld_dev.settings`): `GET /api/settings` (public, merged
-  over code defaults in setting.route.js), `PUT /api/settings` (admin). Keys: `site_title`, `site_subtitle`,
-  `layout_theme`, `theme_color`, `shell_layout`, `theme_palette`. Rows are written only on save; unsaved keys
-  fall back to defaults. Frontend helpers in `Frontend/src/settings.ts` (registries + resolvers).
+  over code defaults in setting.route.js; also returns `has_logo`), `PUT /api/settings` (admin). Keys: `site_title`,
+  `site_subtitle`, `layout_theme`, `theme_color`, `shell_layout`, `theme_palette`. Rows written only on save;
+  unsaved keys fall back to defaults. Frontend helpers in `Frontend/src/settings.ts` (registries + resolvers).
+- **Logo**: stored as a BYTEA blob in `dld_dev.site_assets` (key `logo`, mime_type, data, size). Routes (in
+  setting.route.js): `GET /api/settings/logo` (public, serves bytes), `POST /api/settings/logo` (admin, body
+  `{ mime_type, data(base64) }`, 5 MB cap → 413, route bodyLimit 8 MB), `DELETE /api/settings/logo` (admin).
+  Shown center-cropped 1:1 in the topbar brand + classic hero (`object-fit: cover`). Admin has upload/preview/remove.
+- **Layout width**: content is full-width (the 1160px cap was removed from `.app-frame` + `.topbar-*`).
 - **Theming (4 admin-selectable dimensions, all in Admin → Site settings, applied live):**
   - `shell_layout` — whole-site chrome: `classic` (hero) or `topbar` (sticky app bar). Rendered in App.tsx.
   - `layout_theme` — directory content: `cards` / `compact` / `tiles` / `single` / `sidebar`. Rendered in DirectoryPage.

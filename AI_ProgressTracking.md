@@ -53,6 +53,14 @@
 - Decisions: Surfaces driven by palette vars; accent shades derived in JS; presets-only palettes (custom deferred). Commits carry NO Claude co-author (recorded in AI_CarryOn).
 - Next action: Commit + push; continue refinements as requested.
 
+### 2026-06-30 12:17
+
+- Summary: (a) Made content full-width (removed 1160px cap on app-frame + topbar inner/content). (b) Logo upload: new `site_assets` table (BYTEA blob), `GET/POST/DELETE /api/settings/logo` (public serve / admin upload base64 with 5 MB limit + raised route bodyLimit / admin delete), `has_logo` in settings GET; logo shown center-cropped 1:1 in topbar brand + classic hero; admin upload/preview/remove control. (c) Added a warning under category "Expanded by default" when the sidebar layout is selected (it auto-expands first category by order).
+- Files touched: `setting.route.js`, `models/site_asset.model.js` + `models/index.js`, `settings.ts`, `App.tsx`, `AdminPage.tsx`, `index.css`.
+- Decisions: Store logo as DB blob (not filesystem) per request; base64-over-JSON upload (no multipart dep) with per-route bodyLimit 8 MB; validate mime + 5 MB server-side (413) and client-side. New table created by `sync` (no patch).
+- Verified: has_logo flag, 404 before upload, upload 200 (served as image/png), 401 unauthed, 413 oversize, delete → 404. Full build/type-check clean.
+- Next action: Commit + push.
+
 ---
 
 ## Template Updates

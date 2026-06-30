@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { getAppConfig } from './config';
-import { fetchSiteSettings, resolveAccent, accentVars, paletteVars, defaultColorFor, normalizeShell, normalizePalette, type ShellLayout, type ThemePalette } from './settings';
+import { fetchSiteSettings, resolveAccent, accentVars, paletteVars, defaultColorFor, normalizeShell, normalizePalette, logoUrl, type ShellLayout, type ThemePalette } from './settings';
 import DirectoryPage from './pages/DirectoryPage';
 import AdminPage from './pages/AdminPage';
 import './index.css';
@@ -17,6 +17,8 @@ export default function App() {
   const [accent, setAccent] = useState(defaultColorFor('cards'));
   const [shell, setShell] = useState<ShellLayout>('classic');
   const [palette, setPalette] = useState<ThemePalette>('warm');
+  const [hasLogo, setHasLogo] = useState(false);
+  const [logoTick, setLogoTick] = useState(0); // cache-bust the logo after changes
 
   const loadSettings = async () => {
     const settings = await fetchSiteSettings();
@@ -26,6 +28,8 @@ export default function App() {
       setAccent(resolveAccent(settings));
       setShell(normalizeShell(settings.shell_layout));
       setPalette(normalizePalette(settings.theme_palette));
+      setHasLogo(!!settings.has_logo);
+      setLogoTick((t) => t + 1);
     }
   };
 
@@ -58,7 +62,9 @@ export default function App() {
           <header className="topbar">
             <div className="topbar-inner">
               <div className="topbar-brand">
-                <span className="brand-mark" aria-hidden="true" />
+                {hasLogo
+                  ? <img className="brand-logo" src={logoUrl(logoTick)} alt="" />
+                  : <span className="brand-mark" aria-hidden="true" />}
                 <div className="brand-text">
                   <strong>{title}</strong>
                   {subtitle ? <span>{subtitle}</span> : null}
@@ -79,6 +85,7 @@ export default function App() {
 
           <section className="app-frame">
             <header className="hero">
+              {hasLogo ? <img className="hero-logo" src={logoUrl(logoTick)} alt="" /> : null}
               <p className="hero-kicker">Web Portal</p>
               <h1>{title}</h1>
               <p className="hero-copy">{subtitle}</p>

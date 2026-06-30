@@ -12,7 +12,44 @@ export type SiteSettings = {
   theme_color: string;
   shell_layout: ShellLayout;
   theme_palette: ThemePalette;
+  has_logo: boolean;
 };
+
+export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+
+// URL for the stored logo. Pass a changing `version` to bust the browser cache
+// after an upload/remove.
+export function logoUrl(version?: string | number): string {
+  const base = apiUrl('/api/settings/logo');
+  return version ? `${base}?v=${version}` : base;
+}
+
+function readAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadLogo(file: File): Promise<void> {
+  if (file.size > MAX_LOGO_BYTES) {
+    throw new Error('Logo must be 5 MB or smaller.');
+  }
+  const dataUrl = await readAsDataURL(file);
+  const comma = dataUrl.indexOf(',');
+  const mime = dataUrl.slice(5, dataUrl.indexOf(';')) || file.type;
+  const base64 = dataUrl.slice(comma + 1);
+  await authedFetch('/api/settings/logo', {
+    method: 'POST',
+    body: JSON.stringify({ mime_type: mime, data: base64 }),
+  });
+}
+
+export async function deleteLogo(): Promise<void> {
+  await authedFetch('/api/settings/logo', { method: 'DELETE' });
+}
 
 // Ambient background palettes: a base color + two corner-glow tints
 // (primary / secondary). Quick-pick presets; add more here.

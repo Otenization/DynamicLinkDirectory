@@ -6,6 +6,7 @@ import linkModel from "./link.model.js";
 import userModel from "./user.model.js";
 import sessionModel from "./session.model.js";
 import settingModel from "./setting.model.js";
+import siteAssetModel from "./site_asset.model.js";
 
 export default function initModels(sequelize, schema) {
     const choices = {
@@ -27,6 +28,7 @@ export default function initModels(sequelize, schema) {
     const Users = userModel(sequelize, DataTypes, schema, choices, hooks);
     const Sessions = sessionModel(sequelize, DataTypes, schema, choices, hooks);
     const Settings = settingModel(sequelize, DataTypes, schema, choices, hooks);
+    const SiteAssets = siteAssetModel(sequelize, DataTypes, schema, choices, hooks);
 
     // Associations
     Categories.hasMany(Links, {
@@ -64,6 +66,7 @@ export default function initModels(sequelize, schema) {
             Users,
             Sessions,
             Settings,
+            SiteAssets,
         },
         choices,
     };

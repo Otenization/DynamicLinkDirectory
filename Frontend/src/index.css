@@ -59,7 +59,7 @@
 .app-shell {
 	position: relative;
 	min-height: 100vh;
-	padding: 28px 16px 48px;
+	padding: 28px 24px 48px;
 }
 
 
@@ -87,7 +87,7 @@
 }
 
 .app-frame {
-	width: min(1160px, 100%);
+	width: 100%;
 	margin: 0 auto;
 	position: relative;
 	z-index: 1;
@@ -108,7 +108,7 @@
 }
 
 .topbar-inner {
-	width: min(1160px, 100%);
+	width: 100%;
 	margin: 0 auto;
 	display: flex;
 	align-items: center;
@@ -130,6 +130,81 @@
 	height: 36px;
 	border-radius: 11px;
 	background: rgba(255, 255, 255, 0.2);
+}
+
+/* Logo: always shown as a centered, cropped 1:1 square */
+.brand-logo {
+	flex: 0 0 auto;
+	width: 36px;
+	height: 36px;
+	border-radius: 11px;
+	object-fit: cover;
+	object-position: center;
+	background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-logo {
+	display: block;
+	width: 64px;
+	height: 64px;
+	border-radius: 16px;
+	object-fit: cover;
+	object-position: center;
+	margin-bottom: 12px;
+	box-shadow: 0 8px 20px var(--shadow);
+}
+
+/* Admin logo control */
+.logo-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.logo-preview {
+	flex: 0 0 auto;
+	width: 64px;
+	height: 64px;
+	border-radius: 14px;
+	object-fit: cover;
+	object-position: center;
+	border: 1px solid var(--line);
+	background: var(--card);
+}
+
+.logo-preview.empty {
+	display: grid;
+	place-items: center;
+	color: var(--muted);
+	font-weight: 800;
+}
+
+.logo-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.file-btn {
+	display: inline-flex;
+	align-items: center;
+	padding: 10px 16px;
+	border-radius: 999px;
+	border: 1px solid var(--line);
+	background: var(--card);
+	color: var(--ink);
+	font-weight: 700;
+	font-size: 0.86rem;
+	cursor: pointer;
+}
+
+.file-btn:hover {
+	border-color: var(--accent);
+}
+
+.file-btn input {
+	display: none;
 }
 
 .brand-text {
@@ -176,9 +251,9 @@
 }
 
 .topbar-content {
-	width: min(1160px, 100%);
+	width: 100%;
 	margin: 0 auto;
-	padding: 24px 20px 48px;
+	padding: 24px 24px 48px;
 }
 
 @media (max-width: 720px) {
@@ -1481,6 +1556,11 @@ select:disabled {
 	margin: 6px 2px 0;
 	font-size: 0.75rem;
 	color: var(--muted);
+}
+
+.dld-hint.warn {
+	color: #9a6a1c;
+	font-weight: 600;
 }
 
 .item-card.dragging {

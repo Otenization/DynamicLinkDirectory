@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authedFetch, fetchMe, login, logout, type AuthUser } from '../auth';
-import { fetchSiteSettings, updateSiteSettings, normalizeTheme, normalizeShell, normalizePalette, defaultColorFor, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
+import { fetchSiteSettings, updateSiteSettings, uploadLogo, deleteLogo, logoUrl, normalizeTheme, normalizeShell, normalizePalette, defaultColorFor, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
 import type { Category, Link } from '../types';
 import EmojiPicker from '../components/EmojiPicker';
 import ColorPicker from '../components/ColorPicker';
@@ -115,6 +115,8 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const [siteColor, setSiteColor] = useState(defaultColorFor('cards'));
   const [siteShell, setSiteShell] = useState<ShellLayout>('classic');
   const [sitePalette, setSitePalette] = useState<ThemePalette>('warm');
+  const [hasLogo, setHasLogo] = useState(false);
+  const [logoTick, setLogoTick] = useState(0);
 
   const [catSelected, setCatSelected] = useState<string | null>(null);
   const [catForm, setCatForm] = useState(EMPTY_CATEGORY);
@@ -165,8 +167,27 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       setSiteColor(s.theme_color || defaultColorFor(layout));
       setSiteShell(normalizeShell(s.shell_layout));
       setSitePalette(normalizePalette(s.theme_palette));
+      setHasLogo(!!s.has_logo);
+      setLogoTick((t) => t + 1);
     }
   };
+
+  const onLogoFile = (file: File | null) => {
+    if (!file) return;
+    void guard('settings', async () => {
+      await uploadLogo(file);
+      notify('settings', 'success', 'Logo uploaded.');
+      await loadSettings();
+      onSettingsSaved();
+    });
+  };
+
+  const removeLogo = () => guard('settings', async () => {
+    await deleteLogo();
+    notify('settings', 'success', 'Logo removed.');
+    await loadSettings();
+    onSettingsSaved();
+  });
 
   // Switching layout prefills that layout's default accent (admin can still override).
   const onLayoutChange = (layout: LayoutTheme) => {
@@ -334,6 +355,21 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         <label className="field"><span>Site description</span>
           <textarea value={siteSubtitle} onChange={(e) => setSiteSubtitle(e.target.value)} rows={2} placeholder="A simple web portal — browse and jump to the links you need." />
         </label>
+        <div className="field"><span>Logo</span>
+          <div className="logo-row">
+            {hasLogo
+              ? <img className="logo-preview" src={logoUrl(logoTick)} alt="Current logo" />
+              : <span className="logo-preview empty" aria-hidden="true">—</span>}
+            <div className="logo-actions">
+              <label className="file-btn">
+                {hasLogo ? 'Replace logo' : 'Upload logo'}
+                <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" onChange={(e) => { onLogoFile(e.target.files?.[0] || null); e.target.value = ''; }} disabled={busy} />
+              </label>
+              {hasLogo ? <button type="button" className="secondary-btn" onClick={() => void removeLogo()} disabled={busy}>Remove</button> : null}
+            </div>
+          </div>
+          <p className="dld-hint">Up to 5 MB. Displayed as a centered 1:1 square (cropped to fit).</p>
+        </div>
         <div className="field"><span>Site layout</span>
           <ShellPicker value={siteShell} onChange={setSiteShell} />
         </div>
@@ -419,6 +455,9 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           </div>
           <div className="field"><span>Expanded by default (on directory)</span>
             <Toggle checked={catForm.default_expanded} onChange={(v) => setCatForm((f) => ({ ...f, default_expanded: v }))} onLabel="Expanded" offLabel="Collapsed" />
+            {siteLayout === 'sidebar' ? (
+              <p className="dld-hint warn">⚠ Sidebar layout ignores this — it shows one category at a time and auto-selects the first one by order.</p>
+            ) : null}
           </div>
 
           <div className="button-row">
