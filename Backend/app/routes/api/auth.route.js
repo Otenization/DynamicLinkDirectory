@@ -1,4 +1,4 @@
-import { verifyPassword, generateToken } from '../../../lib/auth.js'
+import { verifyPassword, generateToken, hashPassword } from '../../../lib/auth.js'
 
 function ensureModels(fastify, reply) {
   if (!fastify.db?.Users || !fastify.db?.Sessions) {
@@ -60,5 +60,29 @@ export default async function authRoutes(fastify) {
 
   fastify.get('/me', { preHandler: fastify.authenticate }, async (request, reply) => {
     return reply.send({ ok: true, data: { user: publicUser(request.user) } })
+  })
+
+  // Change the signed-in user's own password.
+  fastify.patch('/password', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const db = ensureModels(fastify, reply)
+    if (!db) return
+
+    const body = request.body || {}
+    const current = String(body.current_password || '')
+    const next = String(body.new_password || '')
+    if (next.length < 6) {
+      return reply.code(400).send({ ok: false, message: 'New password must be at least 6 characters.' })
+    }
+
+    const user = await db.Users.scope('withSecret').findByPk(request.user.uuid)
+    if (!user || !verifyPassword(current, user.password_hash, user.password_salt)) {
+      return reply.code(400).send({ ok: false, message: 'Current password is incorrect.' })
+    }
+
+    const { hash, salt } = hashPassword(next)
+    user.password_hash = hash
+    user.password_salt = salt
+    await user.save()
+    return reply.send({ ok: true, data: { updated: true } })
   })
 }

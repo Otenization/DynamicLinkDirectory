@@ -72,6 +72,13 @@ export async function fetchMe(): Promise<AuthUser | null> {
   }
 }
 
+export async function changePassword(current_password: string, new_password: string): Promise<void> {
+  await authedFetch('/api/auth/password', {
+    method: 'PATCH',
+    body: JSON.stringify({ current_password, new_password }),
+  });
+}
+
 export async function logout(): Promise<void> {
   try {
     await authedFetch('/api/auth/logout', { method: 'POST' });

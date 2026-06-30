@@ -61,6 +61,13 @@
 - Verified: has_logo flag, 404 before upload, upload 200 (served as image/png), 401 unauthed, 413 oversize, delete → 404. Full build/type-check clean.
 - Next action: Commit + push.
 
+### 2026-06-30 12:27
+
+- Summary: Hardening pass started. Decoupled theme color from layout (separate commit). Then #1 — account + user management: `PATCH /api/auth/password` (verify current, min 6); admin `/api/users` CRUD (`user.route.js`) with last-active-admin protection (can't delete self, delete/deactivate/demote last admin) and duplicate-username 409. Frontend `users.ts` + auth `changePassword`; Admin gained an Account (change password) panel and a Users management section (list + editor, role, active toggle, set/reset password).
+- Files touched: `auth.route.js`, `user.route.js`, `app/routes/api/index.js`, `Frontend/src/auth.ts`, `Frontend/src/users.ts`, `Frontend/src/pages/AdminPage.tsx`.
+- Verified: list/create/login-as-new/duplicate-409/change-password/wrong-current-400/self-delete-400/delete-200. Build clean.
+- Next action: #2 login rate-limiting.
+
 ---
 
 ## Template Updates

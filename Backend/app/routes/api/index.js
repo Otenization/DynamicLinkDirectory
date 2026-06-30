@@ -1,6 +1,7 @@
 import categoryRoutes from './category.route.js'
 import linkRoutes from './link.route.js'
 import authRoutes from './auth.route.js'
+import userRoutes from './user.route.js'
 import settingRoutes from './setting.route.js'
 
 export default async function (fastify) {
@@ -101,6 +102,7 @@ export default async function (fastify) {
   })
 
   await fastify.register(authRoutes, { prefix: '/auth' })
+  await fastify.register(userRoutes, { prefix: '/users' })
   await fastify.register(settingRoutes, { prefix: '/settings' })
   await fastify.register(categoryRoutes, { prefix: '/categories' })
   await fastify.register(linkRoutes, { prefix: '/links' })
