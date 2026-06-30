@@ -89,6 +89,13 @@
 - Verified: inserted an expired session row, booted → log "Purged 1 expired session(s)", row count 0 after boot.
 - Next action: #7 URL validation + duplicate-link warning.
 
+### 2026-06-30 12:35
+
+- Summary: #7 — link form URL validation + duplicate warning. `isValidHttpUrl` (parseable http/https, hostname must have a dot or be localhost/IP) blocks save with a clear message. `normalizeUrl` powers a live, non-blocking "⚠ '<title>' already uses this URL" hint under the URL field (excludes the link being edited).
+- Files touched: `Frontend/src/pages/AdminPage.tsx`.
+- Verified: build/type-check clean.
+- Next action: #10 auto-favicon for links.
+
 ---
 
 ## Template Updates

@@ -14,6 +14,28 @@ const EMPTY_USER = { username: '', display_name: '', role: 'admin', password: ''
 const EMPTY_CATEGORY = { name: '', description: '', icon: '', color: '', sort_order: 0, default_expanded: false, is_active: true };
 const EMPTY_LINK = { title: '', url: '', description: '', icon: '', category_id: '', sort_order: 0, open_in_new_tab: true, is_active: true };
 
+function withScheme(raw: string): string {
+  const v = raw.trim();
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+function isValidHttpUrl(raw: string): boolean {
+  const v = raw.trim();
+  if (!v) return false;
+  let u: URL;
+  try { u = new URL(withScheme(v)); } catch { return false; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+  const host = u.hostname;
+  return host === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes('.');
+}
+
+function normalizeUrl(raw: string): string {
+  const v = raw.trim();
+  if (!v) return '';
+  try { return new URL(withScheme(v)).href.replace(/\/+$/, '').toLowerCase(); }
+  catch { return v.replace(/\/+$/, '').toLowerCase(); }
+}
+
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const next = list.slice();
   const [moved] = next.splice(from, 1);
@@ -321,6 +343,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const saveLink = () => guard('link', async () => {
     if (!linkForm.title.trim()) { notify('link', 'error', 'Link title is required.'); return; }
     if (!linkForm.url.trim()) { notify('link', 'error', 'Link URL is required.'); return; }
+    if (!isValidHttpUrl(linkForm.url)) { notify('link', 'error', 'Enter a valid URL (e.g. https://example.com).'); return; }
     if (!linkForm.category_id) { notify('link', 'error', 'Select a category for this link.'); return; }
     if (linkSelected) {
       await authedFetch(`/api/links/${linkSelected}`, { method: 'PATCH', body: JSON.stringify(linkForm) });
@@ -359,6 +382,13 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     const next = catSelected || categories[0]?.uuid || '';
     setLinkForm((f) => (f.category_id === next ? f : { ...f, category_id: next }));
   }, [catSelected, categories, linkSelected]);
+
+  // Non-blocking warning if another link already uses the same URL.
+  const duplicateLink = useMemo(() => {
+    const n = normalizeUrl(linkForm.url);
+    if (!n) return null;
+    return links.find((l) => l.uuid !== linkSelected && normalizeUrl(l.url) === n) || null;
+  }, [links, linkForm.url, linkSelected]);
 
   // Drag is only meaningful on the unsearched list (stable indices map to real order).
   const linkDragEnabled = linkSearch.trim() === '';
@@ -581,6 +611,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <label className="field"><span>URL</span>
             <input value={linkForm.url} onChange={(e) => setLinkForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://example.com" />
           </label>
+          {duplicateLink ? <p className="dld-hint warn">⚠ “{duplicateLink.title}” already uses this URL.</p> : null}
           <label className="field"><span>Description</span>
             <textarea value={linkForm.description} onChange={(e) => setLinkForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
           </label>
