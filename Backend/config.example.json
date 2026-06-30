@@ -32,6 +32,11 @@
     },
     "auth": {
         "session_ttl_hours": 168,
+        "login_rate_limit": {
+            "max_attempts": 5,
+            "window_minutes": 15,
+            "lockout_minutes": 15
+        },
         "default_admin": {
             "username": "admin",
             "password": "change-me",

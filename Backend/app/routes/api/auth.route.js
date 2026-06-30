@@ -18,6 +18,19 @@ function publicUser(user) {
   }
 }
 
+// In-memory login throttle keyed by ip+username. Resets on success; locks after
+// too many failures within the window. (Per-process; fine for a single backend.)
+const loginAttempts = new Map()
+
+function loginRateConfig(fastify) {
+  const c = fastify.config?.auth?.login_rate_limit || {}
+  return {
+    max: Number(c.max_attempts) || 5,
+    windowMs: (Number(c.window_minutes) || 15) * 60000,
+    lockoutMs: (Number(c.lockout_minutes) || 15) * 60000,
+  }
+}
+
 export default async function authRoutes(fastify) {
   const ttlHours = Number(fastify.config?.auth?.session_ttl_hours) || 168
 
@@ -32,11 +45,34 @@ export default async function authRoutes(fastify) {
       return reply.code(400).send({ ok: false, message: 'username and password are required' })
     }
 
+    const { max, windowMs, lockoutMs } = loginRateConfig(fastify)
+    const key = `${request.ip}:${username.toLowerCase()}`
+    const now = Date.now()
+    const rec = loginAttempts.get(key)
+    if (rec && rec.lockedUntil > now) {
+      const secs = Math.ceil((rec.lockedUntil - now) / 1000)
+      reply.header('Retry-After', String(secs))
+      return reply.code(429).send({ ok: false, message: `Too many failed attempts. Try again in about ${Math.max(1, Math.round(secs / 60))} minute(s).` })
+    }
+
     // Use the withSecret scope so the hash/salt are available for verification.
     const user = await db.Users.scope('withSecret').findOne({ where: { username } })
     if (!user || !user.is_active || !verifyPassword(password, user.password_hash, user.password_salt)) {
+      let r = loginAttempts.get(key)
+      if (!r || now - r.firstAt > windowMs) r = { count: 0, firstAt: now, lockedUntil: 0 }
+      r.count += 1
+      if (r.count >= max) r.lockedUntil = now + lockoutMs
+      loginAttempts.set(key, r)
+      // Opportunistic cleanup so the map can't grow unbounded.
+      if (loginAttempts.size > 5000) {
+        for (const [k, v] of loginAttempts) {
+          if ((v.lockedUntil || v.firstAt + windowMs) < now) loginAttempts.delete(k)
+        }
+      }
       return reply.code(401).send({ ok: false, message: 'Invalid username or password.' })
     }
+
+    loginAttempts.delete(key)
 
     const token = generateToken()
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000)

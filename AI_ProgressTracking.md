@@ -68,6 +68,13 @@
 - Verified: list/create/login-as-new/duplicate-409/change-password/wrong-current-400/self-delete-400/delete-200. Build clean.
 - Next action: #2 login rate-limiting.
 
+### 2026-06-30 12:29
+
+- Summary: #2 — login rate limiting. In-memory throttle in `auth.route.js` keyed by `ip:username`: after `max_attempts` failures within `window_minutes`, lock for `lockout_minutes` (defaults 5 / 15 / 15, configurable under `config.auth.login_rate_limit`). Returns 429 + `Retry-After`; success resets the counter; opportunistic map cleanup. Per-process (single backend).
+- Files touched: `auth.route.js`, `config.json` (local), `config.example.json`.
+- Verified: 5×401 then 6th→429 (Retry-After 900); a different account/key still logs in 200.
+- Next action: #3 SVG logo hardening.
+
 ---
 
 ## Template Updates
