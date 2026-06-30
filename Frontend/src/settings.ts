@@ -2,13 +2,72 @@ import { apiUrl } from './config';
 import { authedFetch } from './auth';
 
 export type LayoutTheme = 'cards' | 'compact' | 'tiles' | 'single' | 'sidebar';
+export type ShellLayout = 'classic' | 'topbar';
+export type ThemePalette = 'warm' | 'cool' | 'mint' | 'rose' | 'slate';
 
 export type SiteSettings = {
   site_title: string;
   site_subtitle: string;
   layout_theme: LayoutTheme;
   theme_color: string;
+  shell_layout: ShellLayout;
+  theme_palette: ThemePalette;
 };
+
+// Ambient background palettes: a base color + two corner-glow tints
+// (primary / secondary). Quick-pick presets; add more here.
+type Palette = {
+  value: ThemePalette;
+  label: string;
+  bg: string;       // page base
+  glow1: string;    // primary corner glow
+  glow2: string;    // secondary corner glow
+  panel: string;    // panel surface
+  card: string;     // inner card / pill / button surface
+  line: string;     // borders
+  shadow: string;   // panel shadow
+};
+
+export const THEME_PALETTES: Palette[] = [
+  { value: 'warm', label: 'Warm (orange · green)', bg: '#f3efe7', glow1: '#f0bba1', glow2: '#bfd8ca', panel: 'rgba(255,251,244,0.9)', card: 'rgba(255,250,240,0.85)', line: '#e6ddcd', shadow: 'rgba(65,34,13,0.1)' },
+  { value: 'cool', label: 'Cool (blue · gray)', bg: '#eef1f6', glow1: '#a9c6e8', glow2: '#cdd5e0', panel: 'rgba(252,253,255,0.92)', card: 'rgba(243,246,251,0.9)', line: '#dde3ec', shadow: 'rgba(30,45,70,0.1)' },
+  { value: 'mint', label: 'Mint (green · teal)', bg: '#eef3ee', glow1: '#bfe0c8', glow2: '#bcd9d6', panel: 'rgba(250,253,250,0.92)', card: 'rgba(238,246,240,0.9)', line: '#d9e6dd', shadow: 'rgba(20,55,40,0.1)' },
+  { value: 'rose', label: 'Rose (pink · lavender)', bg: '#f6eef1', glow1: '#f0c2cf', glow2: '#d6cde8', panel: 'rgba(255,250,252,0.92)', card: 'rgba(248,238,243,0.9)', line: '#ecd9e2', shadow: 'rgba(70,30,50,0.1)' },
+  { value: 'slate', label: 'Slate (neutral gray)', bg: '#eef0f3', glow1: '#cdd3dc', glow2: '#d8dde4', panel: 'rgba(251,252,253,0.92)', card: 'rgba(241,243,246,0.9)', line: '#dfe3e9', shadow: 'rgba(40,45,55,0.1)' },
+];
+
+const VALID_PALETTES = THEME_PALETTES.map((p) => p.value);
+
+export function normalizePalette(value: unknown): ThemePalette {
+  return VALID_PALETTES.includes(value as ThemePalette) ? (value as ThemePalette) : 'warm';
+}
+
+export function paletteVars(value: ThemePalette): Record<string, string> {
+  const p = THEME_PALETTES.find((x) => x.value === value) || THEME_PALETTES[0];
+  return {
+    '--bg': p.bg,
+    '--glow-1': p.glow1,
+    '--glow-2': p.glow2,
+    '--panel': p.panel,
+    '--panel-strong': p.panel,
+    '--card': p.card,
+    '--line': p.line,
+    '--shadow': p.shadow,
+  };
+}
+
+// Whole-site chrome (page header/nav arrangement). Add new shells here and
+// handle them in App.tsx; the admin picker is generated from this list.
+export const SHELL_LAYOUTS: { value: ShellLayout; label: string; hint: string }[] = [
+  { value: 'classic', label: 'Classic hero', hint: 'Large title header with pill navigation (template default).' },
+  { value: 'topbar', label: 'Top bar', hint: 'Slim sticky header bar at the top with inline navigation, like a typical web app.' },
+];
+
+const VALID_SHELLS = SHELL_LAYOUTS.map((s) => s.value);
+
+export function normalizeShell(value: unknown): ShellLayout {
+  return VALID_SHELLS.includes(value as ShellLayout) ? (value as ShellLayout) : 'classic';
+}
 
 // Selectable (preset, not customizable) directory layouts. Each carries a muted
 // default accent color. Add new presets here and handle them in DirectoryPage;

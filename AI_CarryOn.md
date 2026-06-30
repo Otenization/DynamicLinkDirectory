@@ -26,14 +26,30 @@ v1 + first refinement pass (auth, DnD, search, click tracking) are built and ver
   `GET /api/meta`, `GET /api/health`.
 - **Admin API** (auth required): `/api/categories` + `/api/links` — GET list, POST, PATCH /:uuid,
   DELETE /:uuid, POST /reorder ({ order: [uuid,...] } → assigns sort_order 1..n).
-- **Frontend**: `/` = DirectoryPage (public; search box, click tracking via sendBeacon, category color accent),
-  `/admin` = AdminPage (login gate → console with drag-and-drop reorder for categories & links,
-  category filter + search, click counts, logout). Native HTML5 DnD, no new deps.
+- **Site settings** (`Settings` key/value table in `dld_dev.settings`): `GET /api/settings` (public, merged
+  over code defaults in setting.route.js), `PUT /api/settings` (admin). Keys: `site_title`, `site_subtitle`,
+  `layout_theme`, `theme_color`, `shell_layout`, `theme_palette`. Rows are written only on save; unsaved keys
+  fall back to defaults. Frontend helpers in `Frontend/src/settings.ts` (registries + resolvers).
+- **Theming (4 admin-selectable dimensions, all in Admin → Site settings, applied live):**
+  - `shell_layout` — whole-site chrome: `classic` (hero) or `topbar` (sticky app bar). Rendered in App.tsx.
+  - `layout_theme` — directory content: `cards` / `compact` / `tiles` / `single` / `sidebar`. Rendered in DirectoryPage.
+  - `theme_color` — accent hex (per-layout default via `defaultColorFor`); App derives `--accent`/`--accent-deep`/`--accent-soft`.
+  - `theme_palette` — ambient + surfaces: `warm`/`cool`/`mint`/`rose`/`slate`; sets `--bg`,`--glow-1/2`,`--panel`,`--card`,`--line`,`--shadow`.
+  - App applies accent + palette CSS vars to `document.documentElement` so `<html>` bg and all panels/cards/pills re-theme.
+    CSS surfaces use these vars (no hard-coded warm literals left except topbar light text).
+- **Frontend**: `/` = DirectoryPage (public; search, collapsible categories w/ per-category `default_expanded`,
+  goto icon-button per link — card body does not navigate, `open_in_new_tab` honored, click tracking via sendBeacon).
+  `/admin` = AdminPage (login gate → console: site settings + visual pickers (LayoutPicker/ShellPicker/PalettePicker),
+  EmojiPicker, ColorPicker, Toggle switches for booleans, DnD reorder, category filter + search, click counts, logout).
+  Links MUST belong to a category (no "Uncategorized" in the form; New-link category syncs with the selected category).
+  Admin feedback is scoped per section and renders under the relevant action button. "New" buttons live in the list panels.
+  Native HTML5 DnD, no new deps.
 - **DB**: Postgres at 192.168.100.100:54322, schema `dld_dev`. `Backend/config.json` has DB enabled.
 - **Schema patches**: `Backend/database/patches.js` runs idempotent `ADD COLUMN IF NOT EXISTS`
-  on boot (needed because `sync.alter` is off — see blocker below). `click_count` was added this way.
-- **Verified 2026-06-30**: frontend build + type-check clean; unauthed writes blocked (401);
-  login/logout/session-expiry work; category reorder persists; click_count increments; SPA served.
+  on boot (needed because `sync.alter` is off — see blocker below). Added this way: `links.click_count`,
+  `links.open_in_new_tab`, `categories.default_expanded`. New tables (users/sessions/settings) are created by `sync`.
+- **Verified 2026-06-30**: frontend build + type-check clean; auth (401/login/logout/expiry); category & link
+  reorder; click_count increments; all settings (layout/color/shell/palette) round-trip via API; SPA served.
 
 ### Known blockers / risks
 
@@ -45,13 +61,17 @@ v1 + first refinement pass (auth, DnD, search, click tracking) are built and ver
 
 ### Refinement backlog
 
-Done in first refinement pass: full-account auth, drag-and-drop reorder, search/filter,
-click tracking, category color accent.
+Done: full-account auth, DnD reorder, search/filter, click tracking, per-link open-in-new-tab,
+per-category default-expanded, collapsible directory, site settings, selectable shell layout +
+directory layout + accent color + background palette (palette also themes panel/card/border surfaces),
+visual pickers, toggle switches, scoped feedback, list New buttons, category-required links.
 
 Still open / nice-to-have:
 - **Change the default admin password** (admin/admin123) and ideally add a user-management UI.
-- Periodic cleanup of expired rows in `sessions` (currently only purged lazily on use).
-- `GET /api/links/:uuid` single-fetch route does not exist (only list/patch/delete) — add if needed.
+- A "Custom" palette option backed by two color pickers (presets only for now).
+- Optional extra shells (e.g. left-rail sidebar) — add to `SHELL_LAYOUTS` + branch in App.tsx.
+- Legacy `links.category_id = null` rows still exist (the "what" link); directory groups them as "Other".
+- Periodic cleanup of expired `sessions` rows (currently purged lazily on use).
 - HTTPS/secure cookie option instead of localStorage token, if deployed beyond LAN.
 - DnD across categories for links (currently reorders within the current filter only).
 
@@ -127,11 +147,18 @@ Examples:
 
 Git workflow policy:
 
+- **Do NOT add a Claude / AI `Co-Authored-By` line (or any AI attribution) to commits.** Author commits as OteEnded only.
 - Do not commit automatically after every edit.
 - Commit only when the user explicitly asks for a commit.
-- Before committing, re-check `git status` and make sure ignored files stay out of the commit.
+- Before committing, re-check `git status` and make sure ignored files stay out of the commit (especially `Backend/config.json` — it holds DB credentials).
+- Keep `AI_CarryOn.md` (current state) and `AI_ProgressTracking.md` (chronological history) updated as work progresses.
 - If the remote changes later, record it in this file for the derived project.
 - Keep this file short and current.
+
+Git state (live):
+
+- `origin` → `https://github.com/Otenization/DynamicLinkDirectory.git`, branch `main`.
+- Local git identity (repo scope): `OteEnded <ratnaritjumnong@gmail.com>`.
 
 ## Suggested Next Steps
 

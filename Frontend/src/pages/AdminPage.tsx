@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authedFetch, fetchMe, login, logout, type AuthUser } from '../auth';
-import { fetchSiteSettings, updateSiteSettings, normalizeTheme, defaultColorFor, LAYOUT_THEMES, type LayoutTheme } from '../settings';
+import { fetchSiteSettings, updateSiteSettings, normalizeTheme, normalizeShell, normalizePalette, defaultColorFor, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
 import type { Category, Link } from '../types';
 import EmojiPicker from '../components/EmojiPicker';
 import ColorPicker from '../components/ColorPicker';
 import LayoutPicker from '../components/LayoutPicker';
+import ShellPicker from '../components/ShellPicker';
+import PalettePicker from '../components/PalettePicker';
+import Toggle from '../components/Toggle';
 
 const EMPTY_CATEGORY = { name: '', description: '', icon: '', color: '', sort_order: 0, default_expanded: false, is_active: true };
 const EMPTY_LINK = { title: '', url: '', description: '', icon: '', category_id: '', sort_order: 0, open_in_new_tab: true, is_active: true };
@@ -110,6 +113,8 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const [siteSubtitle, setSiteSubtitle] = useState('');
   const [siteLayout, setSiteLayout] = useState<LayoutTheme>('cards');
   const [siteColor, setSiteColor] = useState(defaultColorFor('cards'));
+  const [siteShell, setSiteShell] = useState<ShellLayout>('classic');
+  const [sitePalette, setSitePalette] = useState<ThemePalette>('warm');
 
   const [catSelected, setCatSelected] = useState<string | null>(null);
   const [catForm, setCatForm] = useState(EMPTY_CATEGORY);
@@ -158,6 +163,8 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       setSiteSubtitle(s.site_subtitle);
       setSiteLayout(layout);
       setSiteColor(s.theme_color || defaultColorFor(layout));
+      setSiteShell(normalizeShell(s.shell_layout));
+      setSitePalette(normalizePalette(s.theme_palette));
     }
   };
 
@@ -175,7 +182,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
 
   const saveSiteSettings = () => guard('settings', async () => {
     if (!siteTitle.trim()) { notify('settings', 'error', 'Site title is required.'); return; }
-    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor });
+    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor, shell_layout: siteShell, theme_palette: sitePalette });
     notify('settings', 'success', 'Site settings saved.');
     onSettingsSaved();
   });
@@ -321,31 +328,42 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         <p className="eyebrow">Site settings</p>
         <h3>Title & description</h3>
         <p className="muted-copy">Shown in the page header on every page.</p>
-        {renderFeedback('settings')}
         <label className="field"><span>Site title</span>
           <input value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} placeholder="Dynamic Link Directory" />
         </label>
         <label className="field"><span>Site description</span>
           <textarea value={siteSubtitle} onChange={(e) => setSiteSubtitle(e.target.value)} rows={2} placeholder="A simple web portal — browse and jump to the links you need." />
         </label>
+        <div className="field"><span>Site layout</span>
+          <ShellPicker value={siteShell} onChange={setSiteShell} />
+        </div>
+        <p className="dld-hint">{SHELL_LAYOUTS.find((s) => s.value === siteShell)?.hint}</p>
         <div className="field"><span>Directory layout</span>
           <LayoutPicker value={siteLayout} onChange={onLayoutChange} />
         </div>
         <p className="dld-hint">{LAYOUT_THEMES.find((t) => t.value === siteLayout)?.hint} Changing layout resets the color to its default; you can then adjust it.</p>
-        <div className="field"><span>Theme color</span>
+        <div className="field"><span>Theme color (accent)</span>
           <ColorPicker value={siteColor} onChange={(v) => setSiteColor(v)} />
+        </div>
+        <div className="field"><span>Theme palette (background)</span>
+          <PalettePicker value={sitePalette} onChange={setSitePalette} />
         </div>
         <div className="button-row">
           <button className="primary-btn" onClick={() => void saveSiteSettings()} disabled={busy}>Save site settings</button>
         </div>
+        {renderFeedback('settings')}
       </article>
 
       {/* Categories */}
-      {renderFeedback('category')}
       <section className="workspace-grid">
         <article className="panel">
-          <p className="eyebrow">Categories</p>
-          <h3>Groups ({categories.length})</h3>
+          <div className="panel-list-head">
+            <div>
+              <p className="eyebrow">Categories</p>
+              <h3>Groups ({categories.length})</h3>
+            </div>
+            <button className="secondary-btn" onClick={() => selectCategory(null)} disabled={busy}>+ New</button>
+          </div>
           <p className="dld-hint">Drag to reorder.</p>
           <div className="item-list">
             {categories.map((cat, i) => (
@@ -395,38 +413,34 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
             <label className="field"><span>Sort order</span>
               <input type="number" value={catForm.sort_order} onChange={(e) => setCatForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} />
             </label>
-            <label className="field"><span>Visible</span>
-              <select value={catForm.is_active ? 'yes' : 'no'} onChange={(e) => setCatForm((f) => ({ ...f, is_active: e.target.value === 'yes' }))}>
-                <option value="yes">Active</option>
-                <option value="no">Hidden</option>
-              </select>
-            </label>
+            <div className="field"><span>Visible</span>
+              <Toggle checked={catForm.is_active} onChange={(v) => setCatForm((f) => ({ ...f, is_active: v }))} onLabel="Active" offLabel="Hidden" />
+            </div>
           </div>
-          <label className="field"><span>Expanded by default (on directory)</span>
-            <select value={catForm.default_expanded ? 'yes' : 'no'} onChange={(e) => setCatForm((f) => ({ ...f, default_expanded: e.target.value === 'yes' }))}>
-              <option value="no">Collapsed</option>
-              <option value="yes">Expanded</option>
-            </select>
-          </label>
+          <div className="field"><span>Expanded by default (on directory)</span>
+            <Toggle checked={catForm.default_expanded} onChange={(v) => setCatForm((f) => ({ ...f, default_expanded: v }))} onLabel="Expanded" offLabel="Collapsed" />
+          </div>
 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveCategory()} disabled={busy}>{catSelected ? 'Save changes' : 'Create category'}</button>
             {catSelected ? (
-              <>
-                <button className="secondary-btn" onClick={() => selectCategory(null)} disabled={busy}>New</button>
-                <button className="secondary-btn" onClick={() => void deleteCategory(catSelected)} disabled={busy}>Delete</button>
-              </>
+              <button className="secondary-btn" onClick={() => void deleteCategory(catSelected)} disabled={busy}>Delete</button>
             ) : null}
           </div>
+          {renderFeedback('category')}
         </article>
       </section>
 
       {/* Links */}
-      {renderFeedback('link')}
       <section className="workspace-grid">
         <article className="panel">
-          <p className="eyebrow">Links</p>
-          <h3>Links ({displayedLinks.length}{displayedLinks.length !== links.length ? ` of ${links.length}` : ''})</h3>
+          <div className="panel-list-head">
+            <div>
+              <p className="eyebrow">Links</p>
+              <h3>Links ({displayedLinks.length}{displayedLinks.length !== links.length ? ` of ${links.length}` : ''})</h3>
+            </div>
+            <button className="secondary-btn" onClick={() => selectLink(null)} disabled={busy || categories.length === 0}>+ New</button>
+          </div>
 
           <div className="dld-toolbar">
             <select value={linkFilter} onChange={(e) => setLinkFilter(e.target.value)} aria-label="Filter by category">
@@ -496,29 +510,21 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
             <label className="field"><span>Sort order</span>
               <input type="number" value={linkForm.sort_order} onChange={(e) => setLinkForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} />
             </label>
-            <label className="field"><span>Open in</span>
-              <select value={linkForm.open_in_new_tab ? 'new' : 'same'} onChange={(e) => setLinkForm((f) => ({ ...f, open_in_new_tab: e.target.value === 'new' }))}>
-                <option value="new">New tab</option>
-                <option value="same">Same tab</option>
-              </select>
-            </label>
+            <div className="field"><span>Open in</span>
+              <Toggle checked={linkForm.open_in_new_tab} onChange={(v) => setLinkForm((f) => ({ ...f, open_in_new_tab: v }))} onLabel="New tab" offLabel="Same tab" />
+            </div>
           </div>
-          <label className="field"><span>Visible</span>
-            <select value={linkForm.is_active ? 'yes' : 'no'} onChange={(e) => setLinkForm((f) => ({ ...f, is_active: e.target.value === 'yes' }))}>
-              <option value="yes">Active</option>
-              <option value="no">Hidden</option>
-            </select>
-          </label>
+          <div className="field"><span>Visible</span>
+            <Toggle checked={linkForm.is_active} onChange={(v) => setLinkForm((f) => ({ ...f, is_active: v }))} onLabel="Active" offLabel="Hidden" />
+          </div>
 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveLink()} disabled={busy || categories.length === 0}>{linkSelected ? 'Save changes' : 'Create link'}</button>
             {linkSelected ? (
-              <>
-                <button className="secondary-btn" onClick={() => selectLink(null)} disabled={busy}>New</button>
-                <button className="secondary-btn" onClick={() => void deleteLink(linkSelected)} disabled={busy}>Delete</button>
-              </>
+              <button className="secondary-btn" onClick={() => void deleteLink(linkSelected)} disabled={busy}>Delete</button>
             ) : null}
           </div>
+          {renderFeedback('link')}
         </article>
       </section>
     </section>

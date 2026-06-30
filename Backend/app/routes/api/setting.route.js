@@ -7,6 +7,10 @@ const DEFAULTS = {
   layout_theme: 'cards',
   // Empty means "use the selected layout's default color" (resolved on the frontend).
   theme_color: '',
+  // Whole-site chrome: 'classic' (hero header) or 'topbar' (sticky app bar).
+  shell_layout: 'classic',
+  // Ambient background palette preset (warm / cool / mint / rose / slate).
+  theme_palette: 'warm',
 }
 
 const ALLOWED_KEYS = Object.keys(DEFAULTS)

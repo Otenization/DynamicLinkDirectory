@@ -25,9 +25,33 @@
 
 ## Entries
 
-No implementation entries yet.
+### 2026-06-30 09:43
 
-When a real project starts from this template, append entries here.
+- Summary: Built Dynamic Link Directory v1 from the template — replaced TemplateItems with `Categories` + `Links` (Sequelize, FK with onDelete SET NULL), public `GET /api/directory`, admin CRUD + reorder, DirectoryPage + AdminPage, branding, seed data.
+- Files touched: Backend models/routes/seeds/index, `config.json` (DB → `dld_dev`), Frontend App/config/types/pages, README.
+- Decisions: Open admin (no auth) + separate Categories table (per user). `sync.alter` MUST stay `false` (Supabase describeTable bug crashes boot) — created tables via seed; later additive columns via `database/patches.js`.
+- Next action: Refinements.
+
+### 2026-06-30 10:30
+
+- Summary: First refinement pass — full user-account auth (Users/Sessions, scrypt, bearer tokens, `fastify.authenticate` guarding category/link routes, default admin seed), drag-and-drop reorder, search/filter, click tracking (`links.click_count` + public click endpoint), category color accent.
+- Files touched: `lib/auth.js`, `app/plugins/auth.js`, `app/routes/api/auth.route.js`, models (user/session), `patches.js`, Frontend `auth.ts` + pages.
+- Decisions: DB-backed opaque session tokens; token in localStorage; click via `navigator.sendBeacon`.
+- Next action: UX/theming refinements.
+
+### 2026-06-30 11:30
+
+- Summary: Directory UX — collapsible categories (per-category `default_expanded`), goto icon-button per link (card body no longer navigates), removed public click counter; per-link `open_in_new_tab`; emoji picker + color picker; masonry fix (`align-items`/multi-column); admin-bar layout fix; picker layout (specificity) fixes.
+- Files touched: DirectoryPage, AdminPage, EmojiPicker, ColorPicker, models/patches (`open_in_new_tab`, `default_expanded`), `index.css`.
+- Decisions: Clear (×) button moved inside inputs; directory uses CSS multi-column to avoid grid row gaps.
+- Next action: Site-level theming + layout selection.
+
+### 2026-06-30 12:06
+
+- Summary: Site settings + theming system. `Settings` key/value table; `GET/PUT /api/settings`. Four admin-selectable dimensions applied live via CSS vars on `document.documentElement`: shell layout (classic/topbar), directory layout (cards/compact/tiles/single/sidebar), accent color (per-layout default), background palette (warm/cool/mint/rose/slate — now also themes panel/card/border/shadow surfaces, not just bg). Visual pickers (Layout/Shell/Palette), toggle switches replacing boolean dropdowns, scoped admin feedback rendered under the action button, "New" buttons moved to list panels, links now require a category (no Uncategorized; new-link category syncs with selected category).
+- Files touched: `setting.route.js`, `settings.ts`, `App.tsx`, `DirectoryPage.tsx`, `AdminPage.tsx`, components (LayoutPicker, ShellPicker, PalettePicker, Toggle), `index.css`, `README.md`, AI docs.
+- Decisions: Surfaces driven by palette vars; accent shades derived in JS; presets-only palettes (custom deferred). Commits carry NO Claude co-author (recorded in AI_CarryOn).
+- Next action: Commit + push; continue refinements as requested.
 
 ---
 
