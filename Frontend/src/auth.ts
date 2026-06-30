@@ -30,7 +30,9 @@ export async function authedFetch(path: string, init?: RequestInit) {
   const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      // Only declare a JSON body when there actually is one — Fastify rejects an
+      // empty body sent with Content-Type: application/json (e.g. DELETE/logout).
+      ...(init?.body != null ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers || {}),
     },
