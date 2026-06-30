@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '../config';
+import { getToken } from '../auth';
 import { fetchSiteSettings, normalizeTheme, type LayoutTheme } from '../settings';
 import type { DirectoryGroup, Link } from '../types';
 import LinkIcon from '../components/LinkIcon';
+import LoginGate from '../components/LoginGate';
 
 const keyOf = (group: DirectoryGroup) => group.uuid ?? 'uncategorized';
 
@@ -20,6 +22,7 @@ export default function DirectoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [needLogin, setNeedLogin] = useState(false);
   // Categories start collapsed (auto-collapse); user can expand individually.
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   // Sidebar layout: which category is shown in the content pane.
@@ -29,16 +32,33 @@ export default function DirectoryPage() {
     setLoading(true);
     setError('');
     try {
-      const [dirRes, settings] = await Promise.all([
-        fetch(apiUrl('/api/directory')).then((r) => r.json()),
-        fetchSiteSettings(),
-      ]);
-      if (!dirRes?.ok) {
+      const settings = await fetchSiteSettings();
+      setTheme(normalizeTheme(settings?.layout_theme));
+
+      const token = getToken();
+      // When login is required and we have no token, show the gate up front.
+      if (settings?.require_login && !token) {
+        setNeedLogin(true);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        apiUrl('/api/directory'),
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+      );
+      if (response.status === 401) {
+        setNeedLogin(true);
+        setLoading(false);
+        return;
+      }
+      const dirRes = await response.json();
+      if (!response.ok || !dirRes?.ok) {
         throw new Error(dirRes?.message || 'Failed to load directory');
       }
       const data: DirectoryGroup[] = dirRes.data || [];
+      setNeedLogin(false);
       setGroups(data);
-      setTheme(normalizeTheme(settings?.layout_theme));
       setExpanded(Object.fromEntries(data.map((g) => [keyOf(g), !!g.default_expanded])));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error');
@@ -150,6 +170,16 @@ export default function DirectoryPage() {
       </div>
     );
   };
+
+  if (needLogin) {
+    return (
+      <LoginGate
+        heading="Sign in to view"
+        subtext="This directory is private. Please sign in to continue."
+        onLoggedIn={() => { setNeedLogin(false); void loadDirectory(); }}
+      />
+    );
+  }
 
   return (
     <section className="page-stack">

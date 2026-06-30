@@ -26,7 +26,7 @@ function text(v) {
 
 export default async function userRoutes(fastify) {
   // All user-management routes are admin-only.
-  fastify.addHook('preHandler', fastify.authenticate)
+  fastify.addHook('preHandler', fastify.requireAdmin)
 
   fastify.get('/', async (request, reply) => {
     const Users = ensureModel(fastify, reply)

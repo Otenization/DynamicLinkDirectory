@@ -27,7 +27,7 @@ function buildCategoryPatch(body, row) {
 
 export default async function categoryRoutes(fastify) {
   // Every category route is admin-only.
-  fastify.addHook('preHandler', fastify.authenticate)
+  fastify.addHook('preHandler', fastify.requireAdmin)
 
   // List all categories (admin view), ordered for display.
   fastify.get('/', async (request, reply) => {

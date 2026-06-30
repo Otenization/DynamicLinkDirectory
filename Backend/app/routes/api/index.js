@@ -33,7 +33,7 @@ export default async function (fastify) {
 
   // Public directory: active categories (ordered) each with their active links (ordered),
   // plus any active uncategorized links grouped at the end.
-  fastify.get('/directory', async (request, reply) => {
+  fastify.get('/directory', { preHandler: fastify.gateView }, async (request, reply) => {
     if (!fastify.db?.Categories || !fastify.db?.Links) {
       return reply.code(503).send({
         ok: false,

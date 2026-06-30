@@ -29,7 +29,7 @@ function buildLinkPatch(body) {
 export default async function linkRoutes(fastify) {
   // Every link route here is admin-only. The public click-tracking endpoint
   // lives in api/index.js so it stays unauthenticated.
-  fastify.addHook('preHandler', fastify.authenticate)
+  fastify.addHook('preHandler', fastify.requireAdmin)
 
   // List all links (admin view). Optional filters: ?category_id=, ?active=true
   fastify.get('/', async (request, reply) => {

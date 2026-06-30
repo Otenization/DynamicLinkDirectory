@@ -103,6 +103,13 @@
 - Verified: build/type-check clean.
 - Next action: hardening/quality batch (1,2,3,4,7,10) complete.
 
+### 2026-06-30 13:13
+
+- Summary: Roles + configurable view-login. Auth plugin now exposes three guards: `authenticate` (any active user), `requireAdmin` (role==='admin' else 403), `gateView` (requires login only when the `require_login` setting is 'true'). All management APIs (categories, links, users, settings PUT, logo POST/DELETE) moved to `requireAdmin`; `GET /api/directory` uses `gateView`. New `require_login` setting (default 'false'). Frontend: shared `LoginGate` component (extracted from AdminPage); Directory shows the gate when login is required and sends the bearer token; AdminPage shows a "no admin access" screen for non-admin users; Site settings gained a "Require login to view" toggle; user editor role is now an admin/viewer select. `fetchSiteSettings` coerces `require_login` to boolean.
+- Files touched: `app/plugins/auth.js`, `category/link/user/setting` routes, `api/index.js`, `Frontend/src/components/LoginGate.tsx` (new), `settings.ts`, `auth`-consumers, `DirectoryPage.tsx`, `AdminPage.tsx`.
+- Verified: viewer→403 on manage / admin→200; require_login off → directory 200 no token; on → 401 no token, 200 with viewer token; settings stay public; viewer login works; cleanup ok.
+- Next action: as directed.
+
 ---
 
 ## Template Updates

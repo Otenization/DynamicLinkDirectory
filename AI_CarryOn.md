@@ -28,6 +28,11 @@ v1 + first refinement pass (auth, DnD, search, click tracking) are built and ver
   **User management** (admin): `/api/users` CRUD (`user.route.js`); last active admin can't be
   deleted/deactivated/demoted; can't delete self. Admin UI has Account (change password) + Users panels.
   **Session cleanup**: cron (`app/plugins/cron.js`) purges expired sessions daily 03:00 + once on boot.
+  **Roles + view gate**: auth plugin exposes `authenticate` (any active user), `requireAdmin` (role==='admin'
+  → else 403; guards all management APIs), and `gateView` (gates `GET /api/directory` only when the
+  `require_login` setting is on). `require_login` (admin toggle, default off) makes the public Directory require
+  a login; viewer accounts (role 'viewer') can sign in to view but not manage. Shared `LoginGate` component is
+  used by both the Directory (when gated) and Admin; non-admin users hitting /admin get a "no admin access" screen.
 - **Public API** (no auth): `GET /api/directory`, `POST /api/links/:uuid/click` (increments click_count),
   `GET /api/meta`, `GET /api/health`.
 - **Admin API** (auth required): `/api/categories` + `/api/links` — GET list, POST, PATCH /:uuid,

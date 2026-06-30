@@ -13,6 +13,7 @@ export type SiteSettings = {
   shell_layout: ShellLayout;
   theme_palette: ThemePalette;
   has_logo: boolean;
+  require_login: boolean;
 };
 
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
@@ -164,7 +165,10 @@ export async function fetchSiteSettings(): Promise<SiteSettings | null> {
     const response = await fetch(apiUrl('/api/settings'));
     const result = await response.json();
     if (!response.ok || !result?.ok) return null;
-    return result.data as SiteSettings;
+    const data = result.data;
+    // require_login is stored as a string ('true'/'false'); coerce to boolean.
+    data.require_login = data.require_login === true || data.require_login === 'true';
+    return data as SiteSettings;
   } catch {
     return null;
   }

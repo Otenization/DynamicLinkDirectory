@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { authedFetch, fetchMe, login, logout, changePassword, type AuthUser } from '../auth';
+import { authedFetch, fetchMe, logout, changePassword, type AuthUser } from '../auth';
+import LoginGate from '../components/LoginGate';
 import { listUsers, createUser, updateUser, deleteUser, type AdminUser } from '../users';
 import { fetchSiteSettings, updateSiteSettings, uploadLogo, deleteLogo, logoUrl, normalizeTheme, normalizeShell, normalizePalette, DEFAULT_ACCENT, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
 import type { Category, Link } from '../types';
@@ -63,63 +64,25 @@ export default function AdminPage({ onSettingsSaved }: { onSettingsSaved: () => 
   }
 
   if (!user) {
-    return <LoginGate onLoggedIn={setUser} />;
+    return <LoginGate heading="Admin sign in" subtext="Sign in with an admin account to manage the directory." onLoggedIn={setUser} />;
+  }
+
+  if (user.role !== 'admin') {
+    return (
+      <section className="page-stack">
+        <article className="panel">
+          <p className="eyebrow">Admin</p>
+          <h2>No admin access</h2>
+          <p className="muted-copy">You’re signed in as {user.display_name || user.username}, but this account isn’t an admin. Ask an administrator for access.</p>
+          <div className="button-row">
+            <button className="secondary-btn" onClick={() => void (async () => { await logout(); setUser(null); })()}>Log out</button>
+          </div>
+        </article>
+      </section>
+    );
   }
 
   return <AdminConsole user={user} onLoggedOut={() => setUser(null)} onSettingsSaved={onSettingsSaved} />;
-}
-
-function LoginGate({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => void }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const u = await login(username.trim(), password);
-      onLoggedIn(u);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="page-stack">
-      <article className="panel login-card">
-        <p className="eyebrow">Admin</p>
-        <h2>Sign in</h2>
-        <p className="muted-copy">Enter your admin credentials to manage the directory.</p>
-
-        {error ? <p className="message error">{error}</p> : null}
-
-        <label className="field">
-          <span>Username</span>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-        </label>
-        <label className="field">
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
-          />
-        </label>
-
-        <div className="button-row">
-          <button className="primary-btn" onClick={() => void submit()} disabled={busy || !username || !password}>
-            {busy ? 'Signing in...' : 'Sign in'}
-          </button>
-        </div>
-      </article>
-    </section>
-  );
 }
 
 function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; onLoggedOut: () => void; onSettingsSaved: () => void }) {
@@ -139,6 +102,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const [siteColor, setSiteColor] = useState(DEFAULT_ACCENT);
   const [siteShell, setSiteShell] = useState<ShellLayout>('classic');
   const [sitePalette, setSitePalette] = useState<ThemePalette>('warm');
+  const [siteRequireLogin, setSiteRequireLogin] = useState(false);
   const [hasLogo, setHasLogo] = useState(false);
   const [logoTick, setLogoTick] = useState(0);
 
@@ -203,6 +167,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       setSiteColor(s.theme_color || DEFAULT_ACCENT);
       setSiteShell(normalizeShell(s.shell_layout));
       setSitePalette(normalizePalette(s.theme_palette));
+      setSiteRequireLogin(!!s.require_login);
       setHasLogo(!!s.has_logo);
       setLogoTick((t) => t + 1);
     }
@@ -233,7 +198,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
 
   const saveSiteSettings = () => guard('settings', async () => {
     if (!siteTitle.trim()) { notify('settings', 'error', 'Site title is required.'); return; }
-    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor, shell_layout: siteShell, theme_palette: sitePalette });
+    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor, shell_layout: siteShell, theme_palette: sitePalette, require_login: siteRequireLogin });
     notify('settings', 'success', 'Site settings saved.');
     onSettingsSaved();
   });
@@ -449,6 +414,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
             </div>
           </div>
           <p className="dld-hint">Up to 5 MB. Displayed as a centered 1:1 square (cropped to fit).</p>
+        </div>
+        <div className="field"><span>Require login to view</span>
+          <Toggle checked={siteRequireLogin} onChange={setSiteRequireLogin} onLabel="Login required" offLabel="Public" />
+          <p className="dld-hint">When on, visitors must sign in to see the directory. Create viewer accounts under Users below.</p>
         </div>
         <div className="field"><span>Site layout</span>
           <ShellPicker value={siteShell} onChange={setSiteShell} />
@@ -710,7 +679,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           </label>
           <div className="field-row">
             <label className="field"><span>Role</span>
-              <input value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} placeholder="admin" />
+              <select value={userForm.role === 'admin' ? 'admin' : 'viewer'} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))}>
+                <option value="admin">Admin (can manage)</option>
+                <option value="viewer">Viewer (can only view)</option>
+              </select>
             </label>
             <div className="field"><span>Active</span>
               <Toggle checked={userForm.is_active} onChange={(v) => setUserForm((f) => ({ ...f, is_active: v }))} onLabel="Active" offLabel="Disabled" />
@@ -719,7 +691,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <label className="field"><span>{userSelected ? 'New password (blank = keep current)' : 'Password'}</span>
             <input type="password" value={userForm.password} onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))} autoComplete="new-password" placeholder={userSelected ? '••••••' : 'at least 6 characters'} />
           </label>
-          <p className="dld-hint">Any active user can sign in and manage the directory; the “admin” role is protected (the last active admin can’t be removed).</p>
+          <p className="dld-hint">Admins can manage everything; viewers can only sign in to see the directory (used when “Require login” is on). The last active admin can’t be removed or demoted.</p>
 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveUser()} disabled={busy}>{userSelected ? 'Save changes' : 'Create user'}</button>

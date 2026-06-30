@@ -11,6 +11,8 @@ const DEFAULTS = {
   shell_layout: 'classic',
   // Ambient background palette preset (warm / cool / mint / rose / slate).
   theme_palette: 'warm',
+  // 'true' = visitors must log in to view the directory; 'false' = public.
+  require_login: 'false',
 }
 
 const ALLOWED_KEYS = Object.keys(DEFAULTS)
@@ -76,7 +78,7 @@ export default async function settingRoutes(fastify) {
 
   // Admin: upload a logo. Body: { mime_type, data } where data is base64.
   // bodyLimit is raised here so a ~5 MB image (base64 ~6.7 MB) fits.
-  fastify.post('/logo', { preHandler: fastify.authenticate, bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+  fastify.post('/logo', { preHandler: fastify.requireAdmin, bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
     if (!fastify.db?.SiteAssets) {
       return reply.code(503).send({ ok: false, message: 'Database models are unavailable.' })
     }
@@ -104,7 +106,7 @@ export default async function settingRoutes(fastify) {
   })
 
   // Admin: remove the logo.
-  fastify.delete('/logo', { preHandler: fastify.authenticate }, async (request, reply) => {
+  fastify.delete('/logo', { preHandler: fastify.requireAdmin }, async (request, reply) => {
     if (!fastify.db?.SiteAssets) {
       return reply.code(503).send({ ok: false, message: 'Database models are unavailable.' })
     }
@@ -113,7 +115,7 @@ export default async function settingRoutes(fastify) {
   })
 
   // Admin: update one or more known settings.
-  fastify.put('/', { preHandler: fastify.authenticate }, async (request, reply) => {
+  fastify.put('/', { preHandler: fastify.requireAdmin }, async (request, reply) => {
     const Settings = ensureModel(fastify, reply)
     if (!Settings) return
 
