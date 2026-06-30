@@ -1,22 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { getAppConfig } from './config';
-import { fetchSiteSettings } from './settings';
+import { fetchSiteSettings, resolveAccent, accentVars, defaultColorFor } from './settings';
 import DirectoryPage from './pages/DirectoryPage';
 import AdminPage from './pages/AdminPage';
 import './index.css';
 
 export default function App() {
   const config = getAppConfig();
-  // Hero text comes from DB-backed site settings, falling back to bundled config.
+  // Hero text + accent come from DB-backed site settings, falling back to defaults.
   const [title, setTitle] = useState(config.app.name);
   const [subtitle, setSubtitle] = useState(config.app.subtitle);
+  const [accent, setAccent] = useState(defaultColorFor('cards'));
 
   const loadSettings = async () => {
     const settings = await fetchSiteSettings();
     if (settings) {
       setTitle(settings.site_title || config.app.name);
       setSubtitle(settings.site_subtitle || config.app.subtitle);
+      setAccent(resolveAccent(settings));
     }
   };
 
@@ -27,7 +29,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <main className="app-shell">
+      <main className="app-shell" style={accentVars(accent) as CSSProperties}>
         <div className="app-glow app-glow-left" aria-hidden="true" />
         <div className="app-glow app-glow-right" aria-hidden="true" />
 

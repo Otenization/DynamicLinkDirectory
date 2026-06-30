@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authedFetch, fetchMe, login, logout, type AuthUser } from '../auth';
-import { fetchSiteSettings, updateSiteSettings } from '../settings';
+import { fetchSiteSettings, updateSiteSettings, normalizeTheme, defaultColorFor, LAYOUT_THEMES, type LayoutTheme } from '../settings';
 import type { Category, Link } from '../types';
 import EmojiPicker from '../components/EmojiPicker';
 import ColorPicker from '../components/ColorPicker';
+import LayoutPicker from '../components/LayoutPicker';
 
 const EMPTY_CATEGORY = { name: '', description: '', icon: '', color: '', sort_order: 0, default_expanded: false, is_active: true };
 const EMPTY_LINK = { title: '', url: '', description: '', icon: '', category_id: '', sort_order: 0, open_in_new_tab: true, is_active: true };
@@ -97,12 +98,18 @@ function LoginGate({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => void }) {
 function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; onLoggedOut: () => void; onSettingsSaved: () => void }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Feedback is scoped to a section so it renders next to the form that produced it.
+  const [feedback, setFeedback] = useState<{ scope: string; type: 'error' | 'success'; text: string } | null>(null);
+  const notify = (scope: string, type: 'error' | 'success', text: string) => setFeedback({ scope, type, text });
+  const renderFeedback = (scope: string) =>
+    feedback && feedback.scope === scope ? <p className={`message ${feedback.type}`}>{feedback.text}</p> : null;
 
   const [siteTitle, setSiteTitle] = useState('');
   const [siteSubtitle, setSiteSubtitle] = useState('');
+  const [siteLayout, setSiteLayout] = useState<LayoutTheme>('cards');
+  const [siteColor, setSiteColor] = useState(defaultColorFor('cards'));
 
   const [catSelected, setCatSelected] = useState<string | null>(null);
   const [catForm, setCatForm] = useState(EMPTY_CATEGORY);
@@ -119,7 +126,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   const [linkOver, setLinkOver] = useState<number | null>(null);
 
   // Wrap admin calls so an expired session drops back to the login screen.
-  const guard = async (fn: () => Promise<void>) => {
+  const guard = async (scope: string, fn: () => Promise<void>) => {
     setBusy(true);
     try {
       await fn();
@@ -128,14 +135,13 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         onLoggedOut();
         return;
       }
-      setError(err instanceof Error ? err.message : 'Unexpected error');
+      notify(scope, 'error', err instanceof Error ? err.message : 'Unexpected error');
     } finally {
       setBusy(false);
     }
   };
 
   const loadAll = async () => {
-    setError('');
     const [cats, lks] = await Promise.all([
       authedFetch('/api/categories'),
       authedFetch('/api/links'),
@@ -146,21 +152,31 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
 
   const loadSettings = async () => {
     const s = await fetchSiteSettings();
-    if (s) { setSiteTitle(s.site_title); setSiteSubtitle(s.site_subtitle); }
+    if (s) {
+      const layout = normalizeTheme(s.layout_theme);
+      setSiteTitle(s.site_title);
+      setSiteSubtitle(s.site_subtitle);
+      setSiteLayout(layout);
+      setSiteColor(s.theme_color || defaultColorFor(layout));
+    }
+  };
+
+  // Switching layout prefills that layout's default accent (admin can still override).
+  const onLayoutChange = (layout: LayoutTheme) => {
+    setSiteLayout(layout);
+    setSiteColor(defaultColorFor(layout));
   };
 
   useEffect(() => {
-    void guard(loadAll);
+    void guard('global', loadAll);
     void loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const flash = (msg: string) => { setMessage(msg); setError(''); };
-
-  const saveSiteSettings = () => guard(async () => {
-    if (!siteTitle.trim()) { setError('Site title is required.'); return; }
-    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle });
-    flash('Site settings saved.');
+  const saveSiteSettings = () => guard('settings', async () => {
+    if (!siteTitle.trim()) { notify('settings', 'error', 'Site title is required.'); return; }
+    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor });
+    notify('settings', 'success', 'Site settings saved.');
     onSettingsSaved();
   });
 
@@ -180,27 +196,27 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     });
   };
 
-  const saveCategory = () => guard(async () => {
-    if (!catForm.name.trim()) { setError('Category name is required.'); return; }
+  const saveCategory = () => guard('category', async () => {
+    if (!catForm.name.trim()) { notify('category', 'error', 'Category name is required.'); return; }
     if (catSelected) {
       await authedFetch(`/api/categories/${catSelected}`, { method: 'PATCH', body: JSON.stringify(catForm) });
-      flash('Category updated.');
+      notify('category', 'success', 'Category updated.');
     } else {
       await authedFetch('/api/categories', { method: 'POST', body: JSON.stringify(catForm) });
-      flash('Category created.');
+      notify('category', 'success', 'Category created.');
     }
     await loadAll();
     selectCategory(null);
   });
 
-  const deleteCategory = (uuid: string) => guard(async () => {
+  const deleteCategory = (uuid: string) => guard('category', async () => {
     await authedFetch(`/api/categories/${uuid}`, { method: 'DELETE' });
-    flash('Category deleted. Its links are now uncategorized.');
+    notify('category', 'success', 'Category deleted. Its links are now uncategorized.');
     await loadAll();
     if (catSelected === uuid) selectCategory(null);
   });
 
-  const dropCategory = (to: number) => guard(async () => {
+  const dropCategory = (to: number) => guard('category', async () => {
     if (catDrag === null || catDrag === to) { setCatDrag(null); setCatOver(null); return; }
     const reordered = reorder(categories, catDrag, to);
     setCategories(reordered);
@@ -210,12 +226,12 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       body: JSON.stringify({ order: reordered.map((c) => c.uuid) }),
     });
     await loadAll();
-    flash('Category order saved.');
+    notify('category', 'success', 'Category order saved.');
   });
 
   // ---- Links ----
   const selectLink = (link: Link | null) => {
-    if (!link) { setLinkSelected(null); setLinkForm(EMPTY_LINK); return; }
+    if (!link) { setLinkSelected(null); setLinkForm({ ...EMPTY_LINK, category_id: catSelected || categories[0]?.uuid || '' }); return; }
     setLinkSelected(link.uuid);
     setLinkForm({
       title: link.title, url: link.url, description: link.description, icon: link.icon || '',
@@ -224,23 +240,24 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     });
   };
 
-  const saveLink = () => guard(async () => {
-    if (!linkForm.title.trim()) { setError('Link title is required.'); return; }
-    if (!linkForm.url.trim()) { setError('Link URL is required.'); return; }
+  const saveLink = () => guard('link', async () => {
+    if (!linkForm.title.trim()) { notify('link', 'error', 'Link title is required.'); return; }
+    if (!linkForm.url.trim()) { notify('link', 'error', 'Link URL is required.'); return; }
+    if (!linkForm.category_id) { notify('link', 'error', 'Select a category for this link.'); return; }
     if (linkSelected) {
       await authedFetch(`/api/links/${linkSelected}`, { method: 'PATCH', body: JSON.stringify(linkForm) });
-      flash('Link updated.');
+      notify('link', 'success', 'Link updated.');
     } else {
       await authedFetch('/api/links', { method: 'POST', body: JSON.stringify(linkForm) });
-      flash('Link created.');
+      notify('link', 'success', 'Link created.');
     }
     await loadAll();
     selectLink(null);
   });
 
-  const deleteLink = (uuid: string) => guard(async () => {
+  const deleteLink = (uuid: string) => guard('link', async () => {
     await authedFetch(`/api/links/${uuid}`, { method: 'DELETE' });
-    flash('Link deleted.');
+    notify('link', 'success', 'Link deleted.');
     await loadAll();
     if (linkSelected === uuid) selectLink(null);
   });
@@ -257,10 +274,18 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     });
   }, [links, linkFilter, linkSearch]);
 
+  // New-link category mirrors the category selected on the left (or the first one).
+  // While editing an existing link, leave its own category alone.
+  useEffect(() => {
+    if (linkSelected) return;
+    const next = catSelected || categories[0]?.uuid || '';
+    setLinkForm((f) => (f.category_id === next ? f : { ...f, category_id: next }));
+  }, [catSelected, categories, linkSelected]);
+
   // Drag is only meaningful on the unsearched list (stable indices map to real order).
   const linkDragEnabled = linkSearch.trim() === '';
 
-  const dropLink = (to: number) => guard(async () => {
+  const dropLink = (to: number) => guard('link', async () => {
     if (linkDrag === null || linkDrag === to) { setLinkDrag(null); setLinkOver(null); return; }
     const reordered = reorder(displayedLinks, linkDrag, to);
     setLinkDrag(null); setLinkOver(null);
@@ -269,7 +294,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       body: JSON.stringify({ order: reordered.map((l) => l.uuid) }),
     });
     await loadAll();
-    flash('Link order saved.');
+    notify('link', 'success', 'Link order saved.');
   });
 
   return (
@@ -283,32 +308,40 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         <div className="admin-bar">
           <span className="who">Signed in as {user.display_name || user.username}</span>
           <div className="admin-bar-actions">
-            <button className="secondary-btn" onClick={() => void guard(loadAll)} disabled={busy}>Refresh</button>
+            <button className="secondary-btn" onClick={() => void guard('global', loadAll)} disabled={busy}>Refresh</button>
             <button className="secondary-btn" onClick={() => void doLogout()}>Log out</button>
           </div>
         </div>
       </article>
 
-      {error ? <p className="message error">{error}</p> : null}
-      {message ? <p className="message success">{message}</p> : null}
+      {renderFeedback('global')}
 
       {/* Site settings */}
       <article className="panel">
         <p className="eyebrow">Site settings</p>
         <h3>Title & description</h3>
         <p className="muted-copy">Shown in the page header on every page.</p>
+        {renderFeedback('settings')}
         <label className="field"><span>Site title</span>
           <input value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} placeholder="Dynamic Link Directory" />
         </label>
         <label className="field"><span>Site description</span>
           <textarea value={siteSubtitle} onChange={(e) => setSiteSubtitle(e.target.value)} rows={2} placeholder="A simple web portal — browse and jump to the links you need." />
         </label>
+        <div className="field"><span>Directory layout</span>
+          <LayoutPicker value={siteLayout} onChange={onLayoutChange} />
+        </div>
+        <p className="dld-hint">{LAYOUT_THEMES.find((t) => t.value === siteLayout)?.hint} Changing layout resets the color to its default; you can then adjust it.</p>
+        <div className="field"><span>Theme color</span>
+          <ColorPicker value={siteColor} onChange={(v) => setSiteColor(v)} />
+        </div>
         <div className="button-row">
           <button className="primary-btn" onClick={() => void saveSiteSettings()} disabled={busy}>Save site settings</button>
         </div>
       </article>
 
       {/* Categories */}
+      {renderFeedback('category')}
       <section className="workspace-grid">
         <article className="panel">
           <p className="eyebrow">Categories</p>
@@ -389,6 +422,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       </section>
 
       {/* Links */}
+      {renderFeedback('link')}
       <section className="workspace-grid">
         <article className="panel">
           <p className="eyebrow">Links</p>
@@ -434,6 +468,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <p className="eyebrow">Editor</p>
           <h3>{linkSelected ? 'Edit link' : 'New link'}</h3>
 
+          {categories.length === 0 ? (
+            <p className="message error">Add a category first — links must belong to a category.</p>
+          ) : null}
+
           <label className="field"><span>Title</span>
             <input value={linkForm.title} onChange={(e) => setLinkForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Admin Dashboard" />
           </label>
@@ -449,7 +487,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
             </div>
             <label className="field"><span>Category</span>
               <select value={linkForm.category_id} onChange={(e) => setLinkForm((f) => ({ ...f, category_id: e.target.value }))}>
-                <option value="">Uncategorized</option>
+                <option value="" disabled>Select a category…</option>
                 {categories.map((cat) => <option key={cat.uuid} value={cat.uuid}>{cat.name}</option>)}
               </select>
             </label>
@@ -473,7 +511,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           </label>
 
           <div className="button-row">
-            <button className="primary-btn" onClick={() => void saveLink()} disabled={busy}>{linkSelected ? 'Save changes' : 'Create link'}</button>
+            <button className="primary-btn" onClick={() => void saveLink()} disabled={busy || categories.length === 0}>{linkSelected ? 'Save changes' : 'Create link'}</button>
             {linkSelected ? (
               <>
                 <button className="secondary-btn" onClick={() => selectLink(null)} disabled={busy}>New</button>

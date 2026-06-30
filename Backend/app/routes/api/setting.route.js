@@ -4,6 +4,9 @@
 const DEFAULTS = {
   site_title: 'Dynamic Link Directory',
   site_subtitle: 'A simple web portal — browse and jump to the links you need.',
+  layout_theme: 'cards',
+  // Empty means "use the selected layout's default color" (resolved on the frontend).
+  theme_color: '',
 }
 
 const ALLOWED_KEYS = Object.keys(DEFAULTS)
