@@ -51,6 +51,24 @@ export default function App() {
     }
   }, [accent, palette]);
 
+  // Keep the browser tab title in sync with the site title.
+  useEffect(() => {
+    if (title) document.title = title;
+  }, [title]);
+
+  // Use the uploaded logo as the browser tab favicon when present.
+  useEffect(() => {
+    const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (!link) return;
+    if (hasLogo) {
+      link.removeAttribute('type');
+      link.href = logoUrl(logoTick);
+    } else {
+      link.setAttribute('type', 'image/svg+xml');
+      link.href = '/favicon.svg';
+    }
+  }, [hasLogo, logoTick]);
+
   const routes = (
     <Routes>
       <Route path="/" element={<DirectoryPage />} />

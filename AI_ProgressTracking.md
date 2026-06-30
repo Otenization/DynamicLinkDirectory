@@ -135,6 +135,11 @@
 - Files: `Frontend/src/App.tsx`.
 - Next action: as directed.
 
+### 2026-06-30 13:50
+
+- Summary: (#1) Browser tab now reflects site settings — `document.title` syncs to `site_title`, and the tab favicon uses the uploaded logo when present (falls back to /favicon.svg).
+- Files: `Frontend/src/App.tsx`.
+
 ---
 
 ## Template Updates
