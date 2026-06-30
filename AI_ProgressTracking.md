@@ -75,6 +75,13 @@
 - Verified: 5×401 then 6th→429 (Retry-After 900); a different account/key still logs in 200.
 - Next action: #3 SVG logo hardening.
 
+### 2026-06-30 12:31
+
+- Summary: #3 — logo upload hardening. On upload, verify magic bytes match the declared MIME (`logoBytesMatch`) so an HTML/script file can't be stored as an image. On serve, add `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox` so a malicious SVG can't execute scripts if opened directly. SVG stays allowed.
+- Files touched: `setting.route.js`.
+- Verified: valid PNG 200; HTML-as-image/png 400; valid SVG 200; GET /logo returns nosniff + sandbox CSP headers.
+- Next action: #4 purge expired sessions (cron).
+
 ---
 
 ## Template Updates

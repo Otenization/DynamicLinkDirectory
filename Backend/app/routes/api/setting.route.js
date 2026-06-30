@@ -19,6 +19,18 @@ const LOGO_KEY = 'logo'
 const MAX_LOGO_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_LOGO_MIME = /^image\/(png|jpe?g|gif|webp|svg\+xml)$/
 
+// Verify the bytes actually look like the declared image type, so an HTML/script
+// file can't be stored (and later served) under an image MIME.
+function logoBytesMatch(buf, mime) {
+  const h = buf.subarray(0, 16)
+  if (mime === 'image/png') return h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47
+  if (mime === 'image/jpeg' || mime === 'image/jpg') return h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff
+  if (mime === 'image/gif') return h[0] === 0x47 && h[1] === 0x49 && h[2] === 0x46 && h[3] === 0x38
+  if (mime === 'image/webp') return buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP'
+  if (mime === 'image/svg+xml') return buf.subarray(0, 1024).toString('utf8').toLowerCase().includes('<svg')
+  return false
+}
+
 function ensureModel(fastify, reply) {
   if (!fastify.db?.Settings) {
     reply.code(503).send({ ok: false, message: 'Database models are unavailable.' })
@@ -55,6 +67,10 @@ export default async function settingRoutes(fastify) {
     }
     reply.header('Content-Type', row.mime_type)
     reply.header('Cache-Control', 'no-cache')
+    // Neutralize any active content (e.g. scripts inside an SVG) if the asset is
+    // opened directly, and stop content-type sniffing.
+    reply.header('X-Content-Type-Options', 'nosniff')
+    reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
     return reply.send(row.data)
   })
 
@@ -79,6 +95,9 @@ export default async function settingRoutes(fastify) {
     }
     if (buf.length > MAX_LOGO_BYTES) {
       return reply.code(413).send({ ok: false, message: 'Logo must be 5 MB or smaller.' })
+    }
+    if (!logoBytesMatch(buf, mime)) {
+      return reply.code(400).send({ ok: false, message: 'File contents do not match the image type.' })
     }
     await fastify.db.SiteAssets.upsert({ key: LOGO_KEY, mime_type: mime, data: buf, size: buf.length })
     return reply.send({ ok: true, data: { size: buf.length, mime_type: mime } })
