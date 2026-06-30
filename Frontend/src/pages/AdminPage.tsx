@@ -11,6 +11,15 @@ import ShellPicker from '../components/ShellPicker';
 import PalettePicker from '../components/PalettePicker';
 import Toggle from '../components/Toggle';
 
+const ADMIN_TABS = [
+  { id: 'settings', label: 'Site settings' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'links', label: 'Links' },
+  { id: 'users', label: 'Users' },
+  { id: 'account', label: 'Account' },
+] as const;
+type AdminTab = (typeof ADMIN_TABS)[number]['id'];
+
 const EMPTY_USER = { username: '', display_name: '', role: 'admin', password: '', is_active: true };
 const EMPTY_CATEGORY = { name: '', description: '', icon: '', color: '', sort_order: 0, default_expanded: false, is_active: true };
 const EMPTY_LINK = { title: '', url: '', description: '', icon: '', category_id: '', sort_order: 0, open_in_new_tab: true, is_active: true };
@@ -92,6 +101,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
 
   // Feedback is scoped to a section so it renders next to the form that produced it.
   const [feedback, setFeedback] = useState<{ scope: string; type: 'error' | 'success'; text: string } | null>(null);
+  const [tab, setTab] = useState<AdminTab>('categories');
   const notify = (scope: string, type: 'error' | 'success', text: string) => setFeedback({ scope, type, text });
   const renderFeedback = (scope: string) =>
     feedback && feedback.scope === scope ? <p className={`message ${feedback.type}`}>{feedback.text}</p> : null;
@@ -389,7 +399,16 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
 
       {renderFeedback('global')}
 
+      <nav className="admin-tabs" aria-label="Admin sections">
+        {ADMIN_TABS.map((t) => (
+          <button key={t.id} type="button" className={`admin-tab${tab === t.id ? ' on' : ''}`} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
       {/* Site settings */}
+      {tab === 'settings' && (
       <article className="panel">
         <p className="eyebrow">Site settings</p>
         <h3>Title & description</h3>
@@ -438,8 +457,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         </div>
         {renderFeedback('settings')}
       </article>
+      )}
 
       {/* Categories */}
+      {tab === 'categories' && (
       <section className="workspace-grid">
         <article className="panel">
           <div className="panel-list-head">
@@ -518,8 +539,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           {renderFeedback('category')}
         </article>
       </section>
+      )}
 
       {/* Links */}
+      {tab === 'links' && (
       <section className="workspace-grid">
         <article className="panel">
           <div className="panel-list-head">
@@ -616,8 +639,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           {renderFeedback('link')}
         </article>
       </section>
+      )}
 
       {/* Account */}
+      {tab === 'account' && (
       <article className="panel">
         <p className="eyebrow">Account</p>
         <h3>Change your password</h3>
@@ -637,8 +662,10 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
         </div>
         {renderFeedback('account')}
       </article>
+      )}
 
       {/* Users */}
+      {tab === 'users' && (
       <section className="workspace-grid">
         <article className="panel">
           <div className="panel-list-head">
@@ -702,6 +729,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           {renderFeedback('users')}
         </article>
       </section>
+      )}
     </section>
   );
 }

@@ -110,6 +110,13 @@
 - Verified: viewer→403 on manage / admin→200; require_login off → directory 200 no token; on → 401 no token, 200 with viewer token; settings stay public; viewer login works; cleanup ok.
 - Next action: as directed.
 
+### 2026-06-30 13:27
+
+- Summary: (fix) `authedFetch` only sets `Content-Type: application/json` when a body is present — Fastify was rejecting empty-body JSON requests, which broke all DELETE/logout calls ("Body cannot be empty…"). (feat) Admin console is now tabbed (Site settings / Categories / Links / Users / Account) so admins don't scroll; header bar + global feedback stay above the tabs; default tab Categories.
+- Files touched: `Frontend/src/auth.ts`, `Frontend/src/pages/AdminPage.tsx`, `Frontend/src/index.css`.
+- Verified: reproduced empty-body-JSON 400 then confirmed no-Content-Type DELETE reaches the route; build/type-check clean.
+- Next action: as directed.
+
 ---
 
 ## Template Updates

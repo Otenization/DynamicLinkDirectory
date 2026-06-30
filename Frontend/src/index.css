@@ -1600,6 +1600,35 @@ select:disabled {
 	flex: 0 0 auto;
 }
 
+/* Admin section tabs */
+.admin-tabs {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.admin-tab {
+	padding: 9px 16px;
+	border-radius: 999px;
+	border: 1px solid var(--line);
+	background: var(--card);
+	color: var(--ink);
+	font-weight: 700;
+	cursor: pointer;
+	transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.admin-tab:hover {
+	border-color: var(--accent);
+	transform: translateY(-1px);
+}
+
+.admin-tab.on {
+	background: var(--ink);
+	color: #fff8f0;
+	border-color: var(--ink);
+}
+
 .admin-bar-actions {
 	display: flex;
 	gap: 10px;
