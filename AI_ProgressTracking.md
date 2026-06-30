@@ -82,6 +82,13 @@
 - Verified: valid PNG 200; HTML-as-image/png 400; valid SVG 200; GET /logo returns nosniff + sandbox CSP headers.
 - Next action: #4 purge expired sessions (cron).
 
+### 2026-06-30 12:33
+
+- Summary: #4 — wired the cron scaffold to purge expired sessions. `purge-expired-sessions` job (daily 03:00) deletes `sessions` where `expires_at < now`; also sweeps once on `onReady`. Jobs start on ready / stop on close via cronManager.
+- Files touched: `app/plugins/cron.js`.
+- Verified: inserted an expired session row, booted → log "Purged 1 expired session(s)", row count 0 after boot.
+- Next action: #7 URL validation + duplicate-link warning.
+
 ---
 
 ## Template Updates
