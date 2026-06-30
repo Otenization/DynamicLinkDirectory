@@ -10,11 +10,12 @@ function hostOf(url: string): string {
 type Props = {
   link: Pick<Link, 'icon' | 'url'>;
   size?: number;
+  favicons?: boolean;
 };
 
-// Shows the link's custom emoji if set; otherwise the site's favicon, falling
-// back to a generic 🔗 if the favicon can't be loaded.
-export default function LinkIcon({ link, size = 18 }: Props) {
+// Shows the link's custom emoji if set; otherwise (when favicons are enabled)
+// the site's favicon, falling back to a generic 🔗.
+export default function LinkIcon({ link, size = 18, favicons = true }: Props) {
   const [failed, setFailed] = useState(false);
 
   if (link.icon) {
@@ -22,7 +23,7 @@ export default function LinkIcon({ link, size = 18 }: Props) {
   }
 
   const host = hostOf(link.url);
-  if (!host || failed) {
+  if (!favicons || !host || failed) {
     return <span className="link-icon-emoji" style={{ fontSize: size }}>🔗</span>;
   }
 

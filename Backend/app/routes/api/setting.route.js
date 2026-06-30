@@ -13,6 +13,8 @@ const DEFAULTS = {
   theme_palette: 'warm',
   // 'true' = visitors must log in to view the directory; 'false' = public.
   require_login: 'false',
+  // 'true' = links without a custom emoji show the site's favicon (external service).
+  auto_favicon: 'true',
 }
 
 const ALLOWED_KEYS = Object.keys(DEFAULTS)

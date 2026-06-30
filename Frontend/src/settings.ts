@@ -14,6 +14,7 @@ export type SiteSettings = {
   theme_palette: ThemePalette;
   has_logo: boolean;
   require_login: boolean;
+  auto_favicon: boolean;
 };
 
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
@@ -166,8 +167,9 @@ export async function fetchSiteSettings(): Promise<SiteSettings | null> {
     const result = await response.json();
     if (!response.ok || !result?.ok) return null;
     const data = result.data;
-    // require_login is stored as a string ('true'/'false'); coerce to boolean.
+    // Booleans are stored as strings ('true'/'false'); coerce them.
     data.require_login = data.require_login === true || data.require_login === 'true';
+    data.auto_favicon = data.auto_favicon === undefined ? true : (data.auto_favicon === true || data.auto_favicon === 'true');
     return data as SiteSettings;
   } catch {
     return null;

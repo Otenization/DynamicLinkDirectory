@@ -107,6 +107,7 @@ function AdminConsole({ user, onSettingsSaved }: { user: AuthUser; onSettingsSav
   const [siteShell, setSiteShell] = useState<ShellLayout>('classic');
   const [sitePalette, setSitePalette] = useState<ThemePalette>('warm');
   const [siteRequireLogin, setSiteRequireLogin] = useState(false);
+  const [siteAutoFavicon, setSiteAutoFavicon] = useState(true);
   const [hasLogo, setHasLogo] = useState(false);
   const [logoTick, setLogoTick] = useState(0);
 
@@ -173,6 +174,7 @@ function AdminConsole({ user, onSettingsSaved }: { user: AuthUser; onSettingsSav
       setSiteShell(normalizeShell(s.shell_layout));
       setSitePalette(normalizePalette(s.theme_palette));
       setSiteRequireLogin(!!s.require_login);
+      setSiteAutoFavicon(s.auto_favicon !== false);
       setHasLogo(!!s.has_logo);
       setLogoTick((t) => t + 1);
     }
@@ -203,7 +205,7 @@ function AdminConsole({ user, onSettingsSaved }: { user: AuthUser; onSettingsSav
 
   const saveSiteSettings = () => guard('settings', async () => {
     if (!siteTitle.trim()) { notify('settings', 'error', 'Site title is required.'); return; }
-    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor, shell_layout: siteShell, theme_palette: sitePalette, require_login: siteRequireLogin });
+    await updateSiteSettings({ site_title: siteTitle.trim(), site_subtitle: siteSubtitle, layout_theme: siteLayout, theme_color: siteColor, shell_layout: siteShell, theme_palette: sitePalette, require_login: siteRequireLogin, auto_favicon: siteAutoFavicon });
     notify('settings', 'success', 'Site settings saved.');
     onSettingsSaved();
   });
@@ -465,6 +467,10 @@ function AdminConsole({ user, onSettingsSaved }: { user: AuthUser; onSettingsSav
         <div className="field"><span>Require login to view</span>
           <Toggle checked={siteRequireLogin} onChange={setSiteRequireLogin} onLabel="Login required" offLabel="Public" />
           <p className="dld-hint">When on, visitors must sign in to see the directory. Create viewer accounts under Users below.</p>
+        </div>
+        <div className="field"><span>Link favicons</span>
+          <Toggle checked={siteAutoFavicon} onChange={setSiteAutoFavicon} onLabel="Show favicons" offLabel="Off" />
+          <p className="dld-hint">Links without a custom emoji show the site’s favicon (fetched from an external service). Turn off for internal-only or privacy-sensitive portals.</p>
         </div>
         <div className="field"><span>Site layout</span>
           <ShellPicker value={siteShell} onChange={setSiteShell} />

@@ -145,6 +145,12 @@
 - Summary: (#2 data cleanup) Deleted the orphaned legacy "what" link (null category) via the admin API (bounded delete by uuid; raw SQL mass-delete was blocked by the safety classifier). No code change. (#5) Click analytics: Links tab gained a sort control (manual order / most opened) and a "N total opens" stat; DnD reorder only when sorted by manual order with no search.
 - Files: `Frontend/src/pages/AdminPage.tsx`.
 
+### 2026-06-30 13:54
+
+- Summary: (#6) Auto-favicon toggle. New `auto_favicon` setting (default true). When off, links without a custom emoji show 🔗 instead of fetching the external favicon (privacy / internal hosts). LinkIcon takes a `favicons` prop; DirectoryPage passes the setting; admin Site settings has a "Link favicons" toggle.
+- Files: `setting.route.js`, `settings.ts`, `components/LinkIcon.tsx`, `DirectoryPage.tsx`, `AdminPage.tsx`.
+- Verified: default true; PUT false persists + re-reads false; reset.
+
 ---
 
 ## Template Updates

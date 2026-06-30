@@ -19,6 +19,7 @@ const GotoIcon = () => (
 export default function DirectoryPage() {
   const [groups, setGroups] = useState<DirectoryGroup[]>([]);
   const [theme, setTheme] = useState<LayoutTheme>('cards');
+  const [autoFavicon, setAutoFavicon] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -34,6 +35,7 @@ export default function DirectoryPage() {
     try {
       const settings = await fetchSiteSettings();
       setTheme(normalizeTheme(settings?.layout_theme));
+      setAutoFavicon(settings?.auto_favicon !== false);
 
       const token = getToken();
       // When login is required and we have no token, show the gate up front.
@@ -133,7 +135,7 @@ export default function DirectoryPage() {
       // Launcher style: the whole tile is the link.
       return (
         <a key={link.uuid} className="link-tile" title={link.title} aria-label={`Open ${link.title}`} {...linkAnchorProps(link)}>
-          <span className="tile-icon"><LinkIcon link={link} size={30} /></span>
+          <span className="tile-icon"><LinkIcon link={link} size={30} favicons={autoFavicon} /></span>
           <span className="tile-title">{link.title}</span>
         </a>
       );
@@ -142,7 +144,7 @@ export default function DirectoryPage() {
     if (theme === 'compact') {
       return (
         <div className="link-row" key={link.uuid}>
-          <span className="lr-icon" aria-hidden="true"><LinkIcon link={link} size={18} /></span>
+          <span className="lr-icon" aria-hidden="true"><LinkIcon link={link} size={18} favicons={autoFavicon} /></span>
           <div className="lr-main">
             <span className="lr-title">{link.title}</span>
             <span className="lr-host">{hostnameOf(link.url)}</span>
@@ -158,7 +160,7 @@ export default function DirectoryPage() {
     return (
       <div className="item-card link-card" key={link.uuid}>
         <div className="link-main">
-          <strong className="link-title"><LinkIcon link={link} size={18} /> {link.title}</strong>
+          <strong className="link-title"><LinkIcon link={link} size={18} favicons={autoFavicon} /> {link.title}</strong>
           {link.description ? <span>{link.description}</span> : null}
           <div className="pill-row compact">
             <span className="pill">{hostnameOf(link.url)}</span>
