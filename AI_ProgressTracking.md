@@ -156,6 +156,13 @@
 - Summary: (#9) Added a React `ErrorBoundary` (class component) wrapping `<App>` in main.tsx; render errors now show a friendly "This page hit an error" panel with a Reload button instead of a blank screen.
 - Files: `Frontend/src/components/ErrorBoundary.tsx` (new), `Frontend/src/main.tsx`.
 
+### 2026-06-30 13:58
+
+- Summary: (#10) Smoke test + CI. `Backend/scripts/smoke.mjs` (npm run smoke) hits /api/health, /api/meta, /api/settings and accepts /api/directory 200-or-401 (login-gated is healthy); exits non-zero on failure. GitHub Actions `.github/workflows/ci.yml` on push/PR to main: backend `npm ci` + `node --check` on all tracked .js, frontend `npm ci` + `npm run build` (tsc+vite). No DB needed — catches build/type/syntax regressions.
+- Files: `Backend/scripts/smoke.mjs` (new), `Backend/package.json`, `.github/workflows/ci.yml` (new).
+- Verified: smoke against a running server passes (health/meta/settings/directory 200); exit 0.
+- Next action: batch (1,2,5,6,9,10) complete.
+
 ---
 
 ## Template Updates
