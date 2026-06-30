@@ -129,6 +129,12 @@
 - Verified: temp category + 2 links → delete returns removed_links:2, links gone. Build/type-check clean.
 - Next action: as directed.
 
+### 2026-06-30 13:48
+
+- Summary: (fix) Hiding the Admin nav for non-admins had also hidden it from logged-out users, removing the only login entry point. Header now shows a "Log in" link when signed out, "Admin" only for admins, "Log out" when signed in.
+- Files: `Frontend/src/App.tsx`.
+- Next action: as directed.
+
 ---
 
 ## Template Updates

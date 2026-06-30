@@ -76,6 +76,7 @@ export default function App() {
               <nav className="topbar-nav" aria-label="Primary">
                 <NavLink to="/" end className={topNavClass}>Directory</NavLink>
                 {user?.role === 'admin' ? <NavLink to="/admin" className={topNavClass}>Admin</NavLink> : null}
+                {!user ? <NavLink to="/admin" className={topNavClass}>Log in</NavLink> : null}
                 {user ? <button type="button" className="topbar-link" onClick={onLogout}>Log out</button> : null}
               </nav>
             </div>
@@ -98,6 +99,7 @@ export default function App() {
             <nav className="app-nav" aria-label="Primary">
               <NavLink to="/" end className={heroNavClass}>Directory</NavLink>
               {user?.role === 'admin' ? <NavLink to="/admin" className={heroNavClass}>Admin</NavLink> : null}
+              {!user ? <NavLink to="/admin" className={heroNavClass}>Log in</NavLink> : null}
               {user ? <button type="button" className="app-nav-link" onClick={onLogout}>Log out</button> : null}
             </nav>
 
