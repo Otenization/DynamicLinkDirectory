@@ -94,9 +94,13 @@ export default async function categoryRoutes(fastify) {
       return reply.code(404).send({ ok: false, message: 'category not found' })
     }
 
-    // Links keep existing; their category_id is set to null via the FK rule.
-    await row.destroy()
-    return reply.send({ ok: true, data: { uuid } })
+    // Cascade: delete the category's links along with it.
+    const removedLinks = await db.sequelize.transaction(async (tx) => {
+      const n = await db.Links.destroy({ where: { category_id: uuid }, transaction: tx })
+      await row.destroy({ transaction: tx })
+      return n
+    })
+    return reply.send({ ok: true, data: { uuid, removed_links: removedLinks } })
   })
 
   // Reorder categories: body { order: [uuid, uuid, ...] }

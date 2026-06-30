@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { apiUrl } from './config';
 
 export type AuthUser = {
@@ -9,6 +10,47 @@ export type AuthUser = {
 };
 
 const TOKEN_KEY = 'dld_token';
+
+// --- Shared auth state (single source of truth across the app) ---
+let currentUser: AuthUser | null = null;
+let authLoaded = false;
+let loadingPromise: Promise<AuthUser | null> | null = null;
+const subscribers = new Set<() => void>();
+
+function emitAuth() {
+  for (const fn of subscribers) fn();
+}
+
+function setCurrentUser(user: AuthUser | null) {
+  currentUser = user;
+  authLoaded = true;
+  emitAuth();
+}
+
+// Resolve the current user from the stored token (once; shared across callers).
+export async function refreshAuth(): Promise<AuthUser | null> {
+  if (!loadingPromise) {
+    loadingPromise = (async () => {
+      const user = await fetchMe();
+      setCurrentUser(user);
+      return user;
+    })().finally(() => { loadingPromise = null; });
+  }
+  return loadingPromise;
+}
+
+// React hook: current user + whether the initial check has completed.
+export function useAuth(): { user: AuthUser | null; loaded: boolean } {
+  const [snap, setSnap] = useState({ user: currentUser, loaded: authLoaded });
+  useEffect(() => {
+    const update = () => setSnap({ user: currentUser, loaded: authLoaded });
+    subscribers.add(update);
+    update();
+    if (!authLoaded) void refreshAuth();
+    return () => { subscribers.delete(update); };
+  }, []);
+  return snap;
+}
 
 export function getToken(): string {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -40,6 +82,7 @@ export async function authedFetch(path: string, init?: RequestInit) {
 
   if (response.status === 401) {
     clearToken();
+    setCurrentUser(null);
     throw new Error('AUTH');
   }
 
@@ -61,6 +104,7 @@ export async function login(username: string, password: string): Promise<AuthUse
     throw new Error(result?.message || 'Login failed');
   }
   setToken(result.data.token);
+  setCurrentUser(result.data.user as AuthUser);
   return result.data.user as AuthUser;
 }
 
@@ -88,4 +132,5 @@ export async function logout(): Promise<void> {
     // ignore — clearing the local token is what matters
   }
   clearToken();
+  setCurrentUser(null);
 }

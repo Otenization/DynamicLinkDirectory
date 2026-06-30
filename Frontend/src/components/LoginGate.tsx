@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { login, type AuthUser } from '../auth';
 
 type Props = {
-  onLoggedIn: (user: AuthUser) => void;
+  onLoggedIn?: (user: AuthUser) => void;
   heading?: string;
   subtext?: string;
 };
@@ -18,7 +18,7 @@ export default function LoginGate({ onLoggedIn, heading = 'Sign in', subtext = '
     setError('');
     try {
       const u = await login(username.trim(), password);
-      onLoggedIn(u);
+      onLoggedIn?.(u);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

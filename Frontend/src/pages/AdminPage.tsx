@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { authedFetch, fetchMe, logout, changePassword, type AuthUser } from '../auth';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { authedFetch, useAuth, logout, changePassword, type AuthUser } from '../auth';
 import LoginGate from '../components/LoginGate';
+import ConfirmModal from '../components/ConfirmModal';
 import { listUsers, createUser, updateUser, deleteUser, type AdminUser } from '../users';
 import { fetchSiteSettings, updateSiteSettings, uploadLogo, deleteLogo, logoUrl, normalizeTheme, normalizeShell, normalizePalette, DEFAULT_ACCENT, LAYOUT_THEMES, SHELL_LAYOUTS, type LayoutTheme, type ShellLayout, type ThemePalette } from '../settings';
 import type { Category, Link } from '../types';
@@ -54,17 +55,9 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
 }
 
 export default function AdminPage({ onSettingsSaved }: { onSettingsSaved: () => void }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [checking, setChecking] = useState(true);
+  const { user, loaded } = useAuth();
 
-  useEffect(() => {
-    void (async () => {
-      setUser(await fetchMe());
-      setChecking(false);
-    })();
-  }, []);
-
-  if (checking) {
+  if (!loaded) {
     return (
       <section className="page-stack">
         <article className="panel"><p className="muted-copy">Loading...</p></article>
@@ -73,7 +66,7 @@ export default function AdminPage({ onSettingsSaved }: { onSettingsSaved: () => 
   }
 
   if (!user) {
-    return <LoginGate heading="Admin sign in" subtext="Sign in with an admin account to manage the directory." onLoggedIn={setUser} />;
+    return <LoginGate heading="Admin sign in" subtext="Sign in with an admin account to manage the directory." />;
   }
 
   if (user.role !== 'admin') {
@@ -84,17 +77,17 @@ export default function AdminPage({ onSettingsSaved }: { onSettingsSaved: () => 
           <h2>No admin access</h2>
           <p className="muted-copy">You’re signed in as {user.display_name || user.username}, but this account isn’t an admin. Ask an administrator for access.</p>
           <div className="button-row">
-            <button className="secondary-btn" onClick={() => void (async () => { await logout(); setUser(null); })()}>Log out</button>
+            <button className="secondary-btn" onClick={() => void logout()}>Log out</button>
           </div>
         </article>
       </section>
     );
   }
 
-  return <AdminConsole user={user} onLoggedOut={() => setUser(null)} onSettingsSaved={onSettingsSaved} />;
+  return <AdminConsole user={user} onSettingsSaved={onSettingsSaved} />;
 }
 
-function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; onLoggedOut: () => void; onSettingsSaved: () => void }) {
+function AdminConsole({ user, onSettingsSaved }: { user: AuthUser; onSettingsSaved: () => void }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
   const [busy, setBusy] = useState(false);
@@ -102,6 +95,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   // Feedback is scoped to a section so it renders next to the form that produced it.
   const [feedback, setFeedback] = useState<{ scope: string; type: 'error' | 'success'; text: string } | null>(null);
   const [tab, setTab] = useState<AdminTab>('categories');
+  const [confirmState, setConfirmState] = useState<{ title: string; body: ReactNode; onConfirm: () => void } | null>(null);
   const notify = (scope: string, type: 'error' | 'success', text: string) => setFeedback({ scope, type, text });
   const renderFeedback = (scope: string) =>
     feedback && feedback.scope === scope ? <p className={`message ${feedback.type}`}>{feedback.text}</p> : null;
@@ -147,7 +141,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
       await fn();
     } catch (err) {
       if (err instanceof Error && err.message === 'AUTH') {
-        onLoggedOut();
+        // authedFetch already cleared the session; useAuth will drop to login.
         return;
       }
       notify(scope, 'error', err instanceof Error ? err.message : 'Unexpected error');
@@ -213,11 +207,6 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     onSettingsSaved();
   });
 
-  const doLogout = async () => {
-    await logout();
-    onLoggedOut();
-  };
-
   // ---- Account ----
   const savePassword = () => guard('account', async () => {
     if (pwNext.length < 6) { notify('account', 'error', 'New password must be at least 6 characters.'); return; }
@@ -260,6 +249,14 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     if (userSelected === uuid) selectUser(null);
   });
 
+  const confirmDeleteUser = (u: AdminUser) => {
+    setConfirmState({
+      title: `Delete user “${u.username}”?`,
+      body: <p className="muted-copy">This can’t be undone. They will no longer be able to sign in.</p>,
+      onConfirm: () => void removeUser(u.uuid),
+    });
+  };
+
   // ---- Categories ----
   const selectCategory = (cat: Category | null) => {
     if (!cat) { setCatSelected(null); setCatForm(EMPTY_CATEGORY); return; }
@@ -285,11 +282,28 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
   });
 
   const deleteCategory = (uuid: string) => guard('category', async () => {
-    await authedFetch(`/api/categories/${uuid}`, { method: 'DELETE' });
-    notify('category', 'success', 'Category deleted. Its links are now uncategorized.');
+    const res = await authedFetch(`/api/categories/${uuid}`, { method: 'DELETE' });
+    const n = res?.removed_links || 0;
+    notify('category', 'success', n > 0 ? `Category deleted (${n} link${n === 1 ? '' : 's'} removed).` : 'Category deleted.');
     await loadAll();
     if (catSelected === uuid) selectCategory(null);
   });
+
+  const confirmDeleteCategory = (cat: Category) => {
+    const n = links.filter((l) => l.category_id === cat.uuid).length;
+    setConfirmState({
+      title: `Delete category “${cat.name}”?`,
+      body: (
+        <>
+          <p className="muted-copy">This can’t be undone.</p>
+          {n > 0
+            ? <p className="message error">This category has {n} link{n === 1 ? '' : 's'} — they will be deleted too.</p>
+            : <p className="muted-copy">It has no links.</p>}
+        </>
+      ),
+      onConfirm: () => void deleteCategory(cat.uuid),
+    });
+  };
 
   const dropCategory = (to: number) => guard('category', async () => {
     if (catDrag === null || catDrag === to) { setCatDrag(null); setCatOver(null); return; }
@@ -337,6 +351,14 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
     await loadAll();
     if (linkSelected === uuid) selectLink(null);
   });
+
+  const confirmDeleteLink = (link: Link) => {
+    setConfirmState({
+      title: `Delete link “${link.title}”?`,
+      body: <p className="muted-copy">This can’t be undone.</p>,
+      onConfirm: () => void deleteLink(link.uuid),
+    });
+  };
 
   const categoryName = (id: string | null) => categories.find((c) => c.uuid === id)?.name || 'Uncategorized';
 
@@ -392,7 +414,6 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <span className="who">Signed in as {user.display_name || user.username}</span>
           <div className="admin-bar-actions">
             <button className="secondary-btn" onClick={() => void guard('global', loadAll)} disabled={busy}>Refresh</button>
-            <button className="secondary-btn" onClick={() => void doLogout()}>Log out</button>
           </div>
         </div>
       </article>
@@ -533,7 +554,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveCategory()} disabled={busy}>{catSelected ? 'Save changes' : 'Create category'}</button>
             {catSelected ? (
-              <button className="secondary-btn" onClick={() => void deleteCategory(catSelected)} disabled={busy}>Delete</button>
+              <button className="secondary-btn" onClick={() => { const c = categories.find((x) => x.uuid === catSelected); if (c) confirmDeleteCategory(c); }} disabled={busy}>Delete</button>
             ) : null}
           </div>
           {renderFeedback('category')}
@@ -633,7 +654,7 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveLink()} disabled={busy || categories.length === 0}>{linkSelected ? 'Save changes' : 'Create link'}</button>
             {linkSelected ? (
-              <button className="secondary-btn" onClick={() => void deleteLink(linkSelected)} disabled={busy}>Delete</button>
+              <button className="secondary-btn" onClick={() => { const l = links.find((x) => x.uuid === linkSelected); if (l) confirmDeleteLink(l); }} disabled={busy}>Delete</button>
             ) : null}
           </div>
           {renderFeedback('link')}
@@ -723,13 +744,24 @@ function AdminConsole({ user, onLoggedOut, onSettingsSaved }: { user: AuthUser; 
           <div className="button-row">
             <button className="primary-btn" onClick={() => void saveUser()} disabled={busy}>{userSelected ? 'Save changes' : 'Create user'}</button>
             {userSelected && userSelected !== user.uuid ? (
-              <button className="secondary-btn" onClick={() => void removeUser(userSelected)} disabled={busy}>Delete</button>
+              <button className="secondary-btn" onClick={() => { const u = users.find((x) => x.uuid === userSelected); if (u) confirmDeleteUser(u); }} disabled={busy}>Delete</button>
             ) : null}
           </div>
           {renderFeedback('users')}
         </article>
       </section>
       )}
+
+      {confirmState ? (
+        <ConfirmModal
+          title={confirmState.title}
+          busy={busy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={() => { const fn = confirmState.onConfirm; setConfirmState(null); fn(); }}
+        >
+          {confirmState.body}
+        </ConfirmModal>
+      ) : null}
     </section>
   );
 }

@@ -343,6 +343,17 @@
 	color: #fff8f0;
 }
 
+button.app-nav-link {
+	font: inherit;
+}
+
+button.topbar-link {
+	background: transparent;
+	border: 0;
+	font: inherit;
+	cursor: pointer;
+}
+
 .page-stack {
 	display: grid;
 	gap: 16px;
@@ -1598,6 +1609,57 @@ select:disabled {
 	align-items: flex-end;
 	gap: 10px;
 	flex: 0 0 auto;
+}
+
+/* Confirmation modal */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background: rgba(20, 24, 33, 0.5);
+	backdrop-filter: blur(2px);
+}
+
+.modal-card {
+	width: min(440px, 100%);
+	background: var(--panel-strong);
+	border: 1px solid var(--line);
+	border-radius: 20px;
+	padding: 22px;
+	box-shadow: 0 30px 60px rgba(20, 24, 33, 0.35);
+}
+
+.modal-card h3 {
+	margin: 0 0 10px;
+	font-size: 1.2rem;
+}
+
+.modal-body {
+	display: grid;
+	gap: 10px;
+}
+
+.danger-btn {
+	padding: 12px 18px;
+	border: 0;
+	border-radius: 999px;
+	background: #b3382f;
+	color: #fff;
+	font-weight: 700;
+	cursor: pointer;
+	transition: filter 140ms ease;
+}
+
+.danger-btn:hover {
+	filter: brightness(1.06);
+}
+
+.danger-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
 }
 
 /* Admin section tabs */

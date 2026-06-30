@@ -15,8 +15,11 @@ v1 + first refinement pass (auth, DnD, search, click tracking) are built and ver
 - **Domain**: `Categories` (name, description, icon, color, sort_order, is_active),
   `Links` (title, url, description, icon, category_id FK, sort_order, click_count, is_active),
   `Users` (username, display_name, password_hash/salt via scrypt, role, is_active, last_login_at),
-  `Sessions` (user_id FK, token, expires_at). Category hasMany Links (delete → links' category_id null);
-  User hasMany Sessions (cascade delete).
+  `Sessions` (user_id FK, token, expires_at). Deleting a category CASCADE-deletes its links (done explicitly
+  in the route, returns `removed_links`); User hasMany Sessions (cascade delete).
+- **Admin UX**: header shows Log out when signed in + Admin nav only for role 'admin' (shared `useAuth` store in
+  auth.ts). All deletes (category/link/user) go through a `ConfirmModal`; the category modal warns how many links
+  will be cascade-deleted.
 - **Auth**: full accounts. `POST /api/auth/login` → opaque bearer token (stored in `sessions`),
   `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/password` (change own password).
   `fastify.authenticate` preHandler (app/plugins/auth.js) guards ALL `/api/categories`, `/api/links`,

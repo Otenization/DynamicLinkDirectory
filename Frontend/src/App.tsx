@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { getAppConfig } from './config';
+import { useAuth, logout } from './auth';
 import { fetchSiteSettings, resolveAccent, accentVars, paletteVars, DEFAULT_ACCENT, normalizeShell, normalizePalette, logoUrl, type ShellLayout, type ThemePalette } from './settings';
 import DirectoryPage from './pages/DirectoryPage';
 import AdminPage from './pages/AdminPage';
@@ -19,6 +20,8 @@ export default function App() {
   const [palette, setPalette] = useState<ThemePalette>('warm');
   const [hasLogo, setHasLogo] = useState(false);
   const [logoTick, setLogoTick] = useState(0); // cache-bust the logo after changes
+  const { user } = useAuth();
+  const onLogout = () => { void logout(); };
 
   const loadSettings = async () => {
     const settings = await fetchSiteSettings();
@@ -72,7 +75,8 @@ export default function App() {
               </div>
               <nav className="topbar-nav" aria-label="Primary">
                 <NavLink to="/" end className={topNavClass}>Directory</NavLink>
-                <NavLink to="/admin" className={topNavClass}>Admin</NavLink>
+                {user?.role === 'admin' ? <NavLink to="/admin" className={topNavClass}>Admin</NavLink> : null}
+                {user ? <button type="button" className="topbar-link" onClick={onLogout}>Log out</button> : null}
               </nav>
             </div>
           </header>
@@ -93,7 +97,8 @@ export default function App() {
 
             <nav className="app-nav" aria-label="Primary">
               <NavLink to="/" end className={heroNavClass}>Directory</NavLink>
-              <NavLink to="/admin" className={heroNavClass}>Admin</NavLink>
+              {user?.role === 'admin' ? <NavLink to="/admin" className={heroNavClass}>Admin</NavLink> : null}
+              {user ? <button type="button" className="app-nav-link" onClick={onLogout}>Log out</button> : null}
             </nav>
 
             {routes}

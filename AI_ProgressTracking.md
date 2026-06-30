@@ -117,6 +117,18 @@
 - Verified: reproduced empty-body-JSON 400 then confirmed no-Content-Type DELETE reaches the route; build/type-check clean.
 - Next action: as directed.
 
+### 2026-06-30 13:40
+
+- Summary: (feat) Header Log out + role-aware nav. Centralized auth in a shared store (`useAuth`/`refreshAuth` in auth.ts; login/logout/401 update it). Header shows Log out when signed in and the Admin link only for role 'admin'. AdminPage now consumes `useAuth` (removed its own fetchMe/user state + the in-console Log out); LoginGate `onLoggedIn` optional.
+- Files: `auth.ts`, `App.tsx`, `AdminPage.tsx`, `components/LoginGate.tsx`, `index.css`.
+
+### 2026-06-30 13:43
+
+- Summary: (feat) Delete confirmation modals for category/link/user via reusable `ConfirmModal`. Category delete now CASCADES: backend deletes the category's links in a transaction and returns `removed_links`; the modal warns how many links will be deleted (or that there are none). Success message reports the count.
+- Files: `components/ConfirmModal.tsx` (new), `AdminPage.tsx`, `index.css`, `Backend/app/routes/api/category.route.js`.
+- Verified: temp category + 2 links → delete returns removed_links:2, links gone. Build/type-check clean.
+- Next action: as directed.
+
 ---
 
 ## Template Updates
