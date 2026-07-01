@@ -178,6 +178,11 @@
 - Summary: Added `pull-run.bat` — `git pull` then `call run.bat` (aborts if pull fails). Convenience for updating + starting the backend on a deployed Windows box.
 - Files: `pull-run.bat` (new).
 
+### 2026-07-01 14:52
+
+- Summary: `run.bat` is now a full pipeline — installs Backend deps, installs Frontend deps, builds the frontend (→ Backend/public/dist), then starts the backend. Each step aborts on failure. Combined with `pull-run.bat`, one double-click updates + rebuilds + launches.
+- Files: `run.bat`.
+
 ---
 
 ## Template Updates
