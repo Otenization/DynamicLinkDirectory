@@ -2045,6 +2045,44 @@ select:disabled {
 	border-radius: 10px;
 }
 
+.link-actions {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* Copy-link button: neutral, sits next to the dark goto button */
+.copy-btn {
+	flex: 0 0 auto;
+	display: grid;
+	place-items: center;
+	width: 42px;
+	height: 42px;
+	border-radius: 14px;
+	border: 1px solid var(--line);
+	background: var(--card);
+	color: var(--ink);
+	cursor: pointer;
+	transition: transform 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.copy-btn:hover {
+	transform: translateY(-1px);
+	border-color: var(--accent);
+}
+
+.copy-btn.sm {
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+}
+
+.copy-btn.copied {
+	color: #1f7c52;
+	border-color: #1f7c52;
+}
+
 /* Layout: single column / compact (one full-width column of category panels) */
 .directory-stack {
 	display: grid;

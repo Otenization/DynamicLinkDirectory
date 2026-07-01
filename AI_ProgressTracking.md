@@ -168,6 +168,11 @@
 - Summary: Removed the GitHub Actions CI workflow (`.github/workflows/ci.yml`) at the user's request. Kept the smoke test (`Backend/scripts/smoke.mjs` / `npm run smoke`) as a manual check.
 - Files: deleted `.github/workflows/ci.yml`.
 
+### 2026-07-01 14:49
+
+- Summary: (feat) Copy-link button on directory links. New `CopyLinkButton` copies the link URL to clipboard (clipboard API + textarea fallback) and shows a green ✓ for ~1.5s. Added beside the goto button in cards/single/sidebar (wrapped in `.link-actions`) and compact rows; tiles unchanged (whole tile is the link). Styled neutral so goto stays primary.
+- Files: `Frontend/src/components/CopyLinkButton.tsx` (new), `DirectoryPage.tsx`, `index.css`.
+
 ---
 
 ## Template Updates

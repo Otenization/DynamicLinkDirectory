@@ -4,6 +4,7 @@ import { getToken } from '../auth';
 import { fetchSiteSettings, normalizeTheme, type LayoutTheme } from '../settings';
 import type { DirectoryGroup, Link } from '../types';
 import LinkIcon from '../components/LinkIcon';
+import CopyLinkButton from '../components/CopyLinkButton';
 import LoginGate from '../components/LoginGate';
 
 const keyOf = (group: DirectoryGroup) => group.uuid ?? 'uncategorized';
@@ -149,6 +150,7 @@ export default function DirectoryPage() {
             <span className="lr-title">{link.title}</span>
             <span className="lr-host">{hostnameOf(link.url)}</span>
           </div>
+          <CopyLinkButton url={ensureHref(link.url)} title={link.title} className="copy-btn sm" />
           <a className="goto-btn sm" title={`Open ${link.title}`} aria-label={`Open ${link.title}`} {...linkAnchorProps(link)}>
             <GotoIcon />
           </a>
@@ -166,9 +168,12 @@ export default function DirectoryPage() {
             <span className="pill">{hostnameOf(link.url)}</span>
           </div>
         </div>
-        <a className="goto-btn" title={`Open ${link.title}`} aria-label={`Open ${link.title}`} {...linkAnchorProps(link)}>
-          <GotoIcon />
-        </a>
+        <div className="link-actions">
+          <CopyLinkButton url={ensureHref(link.url)} title={link.title} />
+          <a className="goto-btn" title={`Open ${link.title}`} aria-label={`Open ${link.title}`} {...linkAnchorProps(link)}>
+            <GotoIcon />
+          </a>
+        </div>
       </div>
     );
   };
